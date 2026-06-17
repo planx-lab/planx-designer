@@ -1,0 +1,43 @@
+PLANX DESIGNER REPOSITORY LOCK
+
+# Authority
+- docs/architecture.md — Architectural truth
+- AI.md — AI behavioral rules
+- README.md — Developer setup
+- planx-spec/planx-spec.md — PipelineSpec v4 contract (workspace root)
+
+# Scope
+React/TypeScript visual designer for Planx 4.0 PipelineSpec v4.
+Produces YAML/JSON specs. Submits to Control Plane API.
+Does NOT execute pipelines.
+
+# Source directories (immutable)
+- src/api/              — Control Plane API client
+- src/components/
+  - canvas/             — React Flow canvas, nodes, auto-layout
+  - palette/            — Dynamic plugin palette (tabbed by type)
+  - editor/             — Config panel + CodeMirror 6 JSON editor
+  - preview/            — YAML/JSON spec preview
+  - toolbar/            — Pipeline toolbar (name, tenant, validate, submit)
+- src/lib/              — Pure utility functions (no React dependency)
+- src/stores/           — Zustand state stores (pipeline, palette, UI)
+- src/types/            — TypeScript type definitions
+- src/styles/           — Global CSS (Tailwind v4 + design tokens)
+- docs/                 — Architecture documentation
+
+# Monorepo rule
+All source code lives in src/. No package splitting or workspace monorepo.
+
+# Forbidden imports
+- Must NOT import from planx-engine, planx-sdk-*, or planx-plugin-*
+  Go modules. The designer talks ONLY to the Control Plane API.
+- Must NOT import React Flow internal types outside of src/types/node.ts.
+
+# Topology constraint
+Pipeline topology is LINEAR: Source → Processor[] → Sink.
+No DAG, no branching, no fan-in/out, no parallel execution.
+This is enforced at three layers: store guards, spec validation, and UI.
+
+# Config opaqueness
+Plugin config is opaque JSON. The designer never validates or interprets
+config contents beyond JSON syntax checking.

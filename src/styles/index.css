@@ -1,0 +1,75 @@
+@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  /* Planx Designer Dark Mode (OLED) — from UI/UX Pro Max design system */
+  --color-background: #0F172A;
+  --color-foreground: #F8FAFC;
+  --color-primary: #1E293B;
+  --color-on-primary: #FFFFFF;
+  --color-secondary: #334155;
+  --color-accent: #22C55E;
+  --color-muted: #272F42;
+  --color-border: #475569;
+  --color-destructive: #EF4444;
+  --color-ring: #1E293B;
+
+  --color-surface: #1A2333;
+  --color-surface-hover: #243044;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Base */
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* React Flow overrides — dark canvas */
+.react-flow__background {
+  background-color: var(--color-background) !important;
+}
+
+.react-flow__controls button {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-foreground) !important;
+}
+
+.react-flow__minimap {
+  background-color: var(--color-surface) !important;
+}
+
+/* CodeMirror dark theme overrides */
+.cm-editor {
+  background-color: var(--color-muted) !important;
+  color: var(--color-foreground) !important;
+  border-radius: 0.5rem;
+}
+
+.cm-editor .cm-gutters {
+  background-color: var(--color-surface) !important;
+  color: var(--color-border) !important;
+  border-right: 1px solid var(--color-border) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 3px;
+}
