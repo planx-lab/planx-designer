@@ -5,6 +5,8 @@ export type PluginType = 'source' | 'processor' | 'sink';
 export interface PluginDescriptor {
   name: string;
   type: PluginType;
+  /** External-system identity this plugin belongs to (e.g. "mysql"). See planx-architecture.md §3. */
+  connector: string;
   version: string;
   protocol: string;
   description?: string;
