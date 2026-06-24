@@ -18,12 +18,6 @@ export interface PipelineNodeData {
   isValid: boolean;
   /** Validation error message when !isValid. */
   errorMessage?: string;
-  /**
-   * Position index in the linear chain.
-   * 0 = source, N = sink. Processors fill 1..N-1.
-   * Managed by the store; never surfaced in the UI.
-   */
-  _order: number;
 }
 
 /** Typed React Flow node for pipeline rendering. */
