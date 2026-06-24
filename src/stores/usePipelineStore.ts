@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { Edge } from '@xyflow/react';
 import type { PipelineNode } from '@/types/node';
 import type { PluginType } from '@/types/plugin';
 import type { PipelineSpec } from '@/types/pipeline';
@@ -6,10 +7,8 @@ import {
   buildSpec,
   fromSpec,
   validateSpec,
-  computeLinearOrder,
   generateNodeName,
 } from '@/lib/pipeline';
-import { computeEdges, computeLayout } from '@/lib/edges';
 import { toYaml } from '@/lib/yaml';
 
 // ── State ────────────────────────────────────────────────
@@ -20,7 +19,7 @@ interface PipelineState {
   name: string;
   tenantId: string;
   nodes: PipelineNode[];
-  edges: ReturnType<typeof computeEdges>;
+  edges: Edge[];
   /** Undo/redo stacks. Internal; accessed via actions. */
   _past: Snapshot[];
   _future: Snapshot[];
@@ -242,17 +241,17 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
 
     // Spec loading
     loadSpec: (spec) => {
-      const nodes = fromSpec(spec);
+      const { nodes, edges } = fromSpec(spec);
       set({
         name: spec.metadata.name,
         tenantId: spec.metadata.tenantId,
         nodes,
+        edges,
       });
-      get()._sync(nodes);
     },
 
     buildSpec: () =>
-      buildSpec(get().nodes, {
+      buildSpec(get().nodes, get().edges, {
         name: get().name,
         tenantId: get().tenantId,
       }),
@@ -260,7 +259,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     validate: () => validateSpec(get().buildSpec()),
 
     toYaml: () =>
-      toYaml(get().nodes, {
+      toYaml(get().nodes, get().edges, {
         name: get().name,
         tenantId: get().tenantId,
       }),
@@ -327,9 +326,9 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
 
     // Internal sync
     _sync: (nodes) => {
-      const { nodes: positioned } = computeLayout(nodes);
-      const edges = computeEdges(positioned);
-      set({ nodes: positioned, edges });
+      // DAG: edges are user-authorable (Task 4 adds onConnect). For now,
+      // nodes are the source of truth; edges remain a plain state field.
+      set({ nodes });
     },
   }),
 );
@@ -352,7 +351,3 @@ export const selectProcessorNodes = (
   s.nodes
     .filter((n) => n.data.nodeType === 'processor')
     .sort((a, b) => a.data._order - b.data._order);
-
-export const selectLinearOrder = (
-  s: PipelineState & PipelineActions,
-): string[] => computeLinearOrder(s.nodes);

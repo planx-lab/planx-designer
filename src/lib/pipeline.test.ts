@@ -1,237 +1,141 @@
 import { describe, it, expect } from 'vitest';
-import {
-  buildSpec,
-  fromSpec,
-  validateSpec,
-  computeLinearOrder,
-  generateNodeName,
-} from './pipeline';
-import { computeEdges, computeLayout } from './edges';
+import { buildSpec, fromSpec, validateSpec, generateNodeName } from './pipeline';
 import type { PipelineNode, PipelineNodeData } from '@/types/node';
-import type { PipelineSpec } from '@/types/pipeline';
+import type { Edge } from '@xyflow/react';
 
-// ── Helpers ──────────────────────────────────────────────
-
-let idCounter = 0;
-const id = () => `node-${idCounter++}`;
+// ── Fixtures ─────────────────────────────────────────────
 
 function makeNode(
   data: Partial<PipelineNodeData> & { nodeType: PipelineNodeData['nodeType'] },
-  order: number,
+  id: string,
 ): PipelineNode {
   return {
-    id: id(),
+    id,
     type: 'pipelineNode',
     position: { x: 0, y: 0 },
     data: {
-      name: data.name ?? 'n',
+      name: data.name ?? id,
       plugin: data.plugin ?? 'p',
       pluginLabel: data.pluginLabel ?? data.plugin ?? 'p',
       config: data.config ?? {},
       isValid: true,
-      _order: order,
       ...data,
     },
   };
 }
 
 const baseNodes = (): PipelineNode[] => [
-  makeNode({ nodeType: 'source', name: 'src', plugin: 'source-hello' }, 0),
-  makeNode({ nodeType: 'sink', name: 'snk', plugin: 'sink-stdout' }, 1),
+  makeNode({ nodeType: 'source', name: 'src', plugin: 'source-hello' }, 'src'),
+  makeNode({ nodeType: 'processor', name: 'proc', plugin: 'p', pluginLabel: 'P' }, 'proc'),
+  makeNode({ nodeType: 'sink', name: 'snk', plugin: 'sink-stdout' }, 'snk'),
 ];
 
-// ── buildSpec ────────────────────────────────────────────
+const baseEdges = (): Edge[] => [
+  { id: 'e1', source: 'src', target: 'proc' },
+  { id: 'e2', source: 'proc', target: 'snk' },
+];
 
-describe('buildSpec', () => {
+// ── buildSpec (DAG) ──────────────────────────────────────
+
+describe('buildSpec (DAG)', () => {
   it('produces a valid PipelineSpec v4 envelope', () => {
-    const spec = buildSpec(baseNodes(), { name: 'demo', tenantId: 't1' });
+    const spec = buildSpec(baseNodes(), baseEdges(), { name: 'demo', tenantId: 't1' });
     expect(spec.apiVersion).toBe('planx.io/v4');
     expect(spec.kind).toBe('Pipeline');
     expect(spec.metadata).toEqual({ name: 'demo', tenantId: 't1' });
   });
 
-  it('omits processors when none present', () => {
-    const spec = buildSpec(baseNodes(), { name: 'demo', tenantId: 't1' });
-    expect(spec.spec.processors).toBeUndefined();
-  });
-
-  it('orders processors by _order and includes them', () => {
-    const nodes = [
-      makeNode({ nodeType: 'source', name: 'src', plugin: 's' }, 0),
-      makeNode({ nodeType: 'processor', name: 'p2', plugin: 'p2' }, 3),
-      makeNode({ nodeType: 'processor', name: 'p1', plugin: 'p1' }, 1),
-      makeNode({ nodeType: 'sink', name: 'snk', plugin: 'k' }, 2),
-    ];
-    const spec = buildSpec(nodes, { name: 'd', tenantId: 't' });
-    expect(spec.spec.processors?.map((p) => p.name)).toEqual(['p1', 'p2']);
+  it('produces nodes + edges with correct ids/kinds/plugins', () => {
+    const spec = buildSpec(baseNodes(), baseEdges(), { name: 'p', tenantId: 't' });
+    expect(spec.spec.nodes).toHaveLength(3);
+    expect(spec.spec.nodes[0]).toMatchObject({ id: 'src', kind: 'source', plugin: 'source-hello' });
+    expect(spec.spec.nodes[1]).toMatchObject({ id: 'proc', kind: 'processor', plugin: 'p' });
+    expect(spec.spec.nodes[2]).toMatchObject({ id: 'snk', kind: 'sink', plugin: 'sink-stdout' });
+    expect(spec.spec.edges).toHaveLength(2);
+    expect(spec.spec.edges[0]).toEqual({ from: 'src', to: 'proc' });
+    expect(spec.spec.edges[1]).toEqual({ from: 'proc', to: 'snk' });
   });
 
   it('omits empty config objects', () => {
     const nodes = [
-      makeNode({ nodeType: 'source', name: 'src', plugin: 's', config: {} }, 0),
-      makeNode({ nodeType: 'sink', name: 'snk', plugin: 'k', config: { a: 1 } }, 1),
+      makeNode({ nodeType: 'source', plugin: 's', config: {} }, 'src'),
+      makeNode({ nodeType: 'sink', plugin: 'k', config: { a: 1 } }, 'snk'),
     ];
-    const spec = buildSpec(nodes, { name: 'd', tenantId: 't' });
-    expect(spec.spec.source.config).toBeUndefined();
-    expect(spec.spec.sink.config).toEqual({ a: 1 });
-  });
-
-  it('throws when source or sink is missing', () => {
-    const sourceOnly = [makeNode({ nodeType: 'source' }, 0)];
-    expect(() => buildSpec(sourceOnly, { name: 'd', tenantId: 't' })).toThrow();
+    const edges: Edge[] = [{ id: 'e1', source: 'src', target: 'snk' }];
+    const spec = buildSpec(nodes, edges, { name: 'd', tenantId: 't' });
+    expect(spec.spec.nodes[0].config).toBeUndefined();
+    expect(spec.spec.nodes[1].config).toEqual({ a: 1 });
   });
 });
 
-// ── fromSpec (round-trip) ────────────────────────────────
+// ── fromSpec (DAG round-trip) ────────────────────────────
 
-describe('fromSpec', () => {
-  it('round-trips through buildSpec preserving topology', () => {
-    const original: PipelineSpec = {
-      apiVersion: 'planx.io/v4',
-      kind: 'Pipeline',
-      metadata: { name: 'rt', tenantId: 't1' },
-      spec: {
-        source: { name: 'src', plugin: 'source-hello' },
-        processors: [
-          { name: 'p1', plugin: 'proc-a' },
-          { name: 'p2', plugin: 'proc-b', config: { x: true } },
-        ],
-        sink: { name: 'snk', plugin: 'sink-stdout' },
-      },
-    };
-
-    const nodes = fromSpec(original);
-    // 1 source + 2 processors + 1 sink
-    expect(nodes).toHaveLength(4);
-    expect(nodes.filter((n) => n.data.nodeType === 'processor')).toHaveLength(2);
-
-    const rebuilt = buildSpec(nodes, { name: 'rt', tenantId: 't1' });
-    expect(rebuilt.spec.source).toEqual(original.spec.source);
-    expect(rebuilt.spec.processors).toEqual(original.spec.processors);
-    expect(rebuilt.spec.sink).toEqual(original.spec.sink);
+describe('fromSpec (DAG)', () => {
+  it('round-trips nodes + edges', () => {
+    const spec = buildSpec(baseNodes(), baseEdges(), { name: 'p', tenantId: 't' });
+    const back = fromSpec(spec);
+    expect(back.nodes).toHaveLength(3);
+    expect(back.nodes[0].id).toBe('src');
+    expect(back.nodes[0].data.nodeType).toBe('source');
+    expect(back.nodes[0].data.plugin).toBe('source-hello');
+    expect(back.nodes[2].id).toBe('snk');
+    expect(back.nodes[2].data.nodeType).toBe('sink');
+    expect(back.edges).toHaveLength(2);
+    expect(back.edges[0].source).toBe('src');
+    expect(back.edges[0].target).toBe('proc');
+    expect(back.edges[1].source).toBe('proc');
+    expect(back.edges[1].target).toBe('snk');
   });
 });
 
-// ── validateSpec ─────────────────────────────────────────
+// ── validateSpec (DAG) ───────────────────────────────────
 
-describe('validateSpec', () => {
-  const validSpec = (): PipelineSpec => ({
-    apiVersion: 'planx.io/v4',
-    kind: 'Pipeline',
-    metadata: { name: 'demo', tenantId: 't1' },
-    spec: {
-      source: { name: 'src', plugin: 'source-hello' },
-      sink: { name: 'snk', plugin: 'sink-stdout' },
-    },
-  });
+describe('validateSpec (DAG)', () => {
+  const valid = () => buildSpec(baseNodes(), baseEdges(), { name: 'p', tenantId: 't' });
 
-  it('passes a valid minimal spec', () => {
-    expect(validateSpec(validSpec()).valid).toBe(true);
+  it('accepts a valid DAG', () => {
+    expect(validateSpec(valid()).valid).toBe(true);
+    expect(validateSpec(valid()).errors).toEqual([]);
   });
 
   it('flags missing pipeline name', () => {
-    const s = validSpec();
+    const s = valid();
     s.metadata.name = '';
     const r = validateSpec(s);
     expect(r.valid).toBe(false);
     expect(r.errors.some((e) => e.includes('Pipeline name'))).toBe(true);
   });
 
-  it('flags missing tenant id', () => {
-    const s = validSpec();
-    s.metadata.tenantId = '  ';
-    const r = validateSpec(s);
-    expect(r.errors.some((e) => e.includes('Tenant ID'))).toBe(true);
+  it('rejects a cycle', () => {
+    const s = valid();
+    s.spec.edges.push({ from: 'snk', to: 'src' }); // src->proc->snk->src cycle
+    expect(validateSpec(s).errors.join(' ')).toMatch(/cycle/i);
   });
 
-  it('flags missing source plugin', () => {
-    const s = validSpec();
-    s.spec.source.plugin = '';
-    const r = validateSpec(s);
-    expect(r.errors.some((e) => e.includes('Source node plugin'))).toBe(true);
+  it('rejects two sources', () => {
+    const s = valid();
+    s.spec.nodes[1].kind = 'source'; // proc becomes a 2nd source
+    expect(validateSpec(s).errors.join(' ')).toMatch(/source/i);
   });
 
-  it('flags duplicate node names', () => {
-    const s = validSpec();
-    s.spec.processors = [{ name: 'src', plugin: 'p' }]; // clashes with source name
-    const r = validateSpec(s);
-    expect(r.errors.some((e) => e.includes('Duplicate'))).toBe(true);
+  it('rejects a dangling edge', () => {
+    const s = valid();
+    s.spec.edges.push({ from: 'ghost', to: 'snk' });
+    expect(validateSpec(s).errors.join(' ')).toMatch(/not found/i);
+  });
+
+  it('rejects duplicate node id', () => {
+    const s = valid();
+    s.spec.nodes.push({ id: 'src', kind: 'processor', plugin: 'p' });
+    expect(validateSpec(s).errors.join(' ')).toMatch(/duplicate/i);
   });
 
   it('returns ALL errors, not just the first', () => {
-    const s = validSpec();
+    const s = valid();
     s.metadata.name = '';
     s.metadata.tenantId = '';
-    s.spec.source.plugin = '';
     const r = validateSpec(s);
-    expect(r.errors.length).toBeGreaterThanOrEqual(3);
-  });
-});
-
-// ── computeEdges (linearity guarantee) ───────────────────
-
-describe('computeEdges', () => {
-  it('produces a single linear chain (n-1 edges for n nodes)', () => {
-    const nodes = [
-      makeNode({ nodeType: 'source' }, 0),
-      makeNode({ nodeType: 'processor' }, 1),
-      makeNode({ nodeType: 'processor' }, 2),
-      makeNode({ nodeType: 'sink' }, 3),
-    ];
-    const edges = computeEdges(nodes);
-    expect(edges).toHaveLength(3); // never branches, never merges
-    // each edge's target is the next node's source
-    expect(edges[0].source).toBe(nodes[0].id);
-    expect(edges[0].target).toBe(nodes[1].id);
-    expect(edges[2].target).toBe(nodes[3].id);
-  });
-
-  it('produces zero edges for a single node', () => {
-    const edges = computeEdges([makeNode({ nodeType: 'source' }, 0)]);
-    expect(edges).toHaveLength(0);
-  });
-
-  it('respects _order, not array order', () => {
-    const a = makeNode({ nodeType: 'source' }, 0);
-    const b = makeNode({ nodeType: 'sink' }, 1);
-    const edges = computeEdges([b, a]); // deliberately reversed in array
-    expect(edges[0].source).toBe(a.id);
-    expect(edges[0].target).toBe(b.id);
-  });
-});
-
-// ── computeLayout ────────────────────────────────────────
-
-describe('computeLayout', () => {
-  it('stacks nodes vertically with increasing y', () => {
-    const nodes = [
-      makeNode({ nodeType: 'source' }, 0),
-      makeNode({ nodeType: 'processor' }, 1),
-      makeNode({ nodeType: 'sink' }, 2),
-    ];
-    const { nodes: laid } = computeLayout(nodes);
-    const ys = laid.map((n) => n.position.y);
-    expect(ys).toEqual([...ys].sort((a, b) => a - b)); // strictly ascending
-    // all share the same x (centered column)
-    const xs = laid.map((n) => n.position.x);
-    expect(new Set(xs).size).toBe(1);
-  });
-});
-
-// ── computeLinearOrder ───────────────────────────────────
-
-describe('computeLinearOrder', () => {
-  it('returns source first, sink last, processors between', () => {
-    const nodes = [
-      makeNode({ nodeType: 'sink' }, 3),
-      makeNode({ nodeType: 'processor', name: 'p1' }, 1),
-      makeNode({ nodeType: 'source' }, 0),
-      makeNode({ nodeType: 'processor', name: 'p2' }, 2),
-    ];
-    const order = computeLinearOrder(nodes);
-    expect(order).toHaveLength(4);
-    expect(nodes.find((n) => n.id === order[0])?.data.nodeType).toBe('source');
-    expect(nodes.find((n) => n.id === order[3])?.data.nodeType).toBe('sink');
+    expect(r.errors.length).toBeGreaterThanOrEqual(2);
   });
 });
 

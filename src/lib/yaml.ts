@@ -1,14 +1,19 @@
+import type { Edge } from '@xyflow/react';
 import type { PipelineSpec } from '@/types/pipeline';
 import { buildSpec } from './pipeline';
 import type { PipelineNode } from '@/types/node';
 
 /**
- * Serialize internal nodes to a YAML string.
+ * Serialize internal nodes + edges to a YAML string.
  * Uses a basic serializer to avoid the ~45 kB js-yaml dependency
  * for the simple flat structures PipelineSpec uses.
  */
-export function toYaml(nodes: PipelineNode[], metadata: { name: string; tenantId: string }): string {
-  const spec = buildSpec(nodes, metadata);
+export function toYaml(
+  nodes: PipelineNode[],
+  edges: Edge[],
+  metadata: { name: string; tenantId: string },
+): string {
+  const spec = buildSpec(nodes, edges, metadata);
   return serializeSpec(spec);
 }
 
@@ -20,35 +25,26 @@ function serializeSpec(spec: PipelineSpec): string {
     `  name: ${spec.metadata.name}`,
     `  tenantId: ${spec.metadata.tenantId}`,
     'spec:',
-    '  source:',
-    ...indent(serializeNode(spec.spec.source), 4),
+    '  nodes:',
   ];
 
-  if (spec.spec.processors && spec.spec.processors.length > 0) {
-    lines.push('  processors:');
-    for (const proc of spec.spec.processors) {
-      lines.push(`    - name: ${proc.name}`);
-      lines.push(`      plugin: ${proc.plugin}`);
-      if (proc.config && Object.keys(proc.config).length > 0) {
-        lines.push(`      config:`);
-        lines.push(...indent(serializeConfig(proc.config), 8));
-      }
+  for (const node of spec.spec.nodes) {
+    lines.push(`    - id: ${node.id}`);
+    lines.push(`      kind: ${node.kind}`);
+    lines.push(`      plugin: ${node.plugin}`);
+    if (node.config && Object.keys(node.config).length > 0) {
+      lines.push(`      config:`);
+      lines.push(...indent(serializeConfig(node.config), 8));
     }
   }
 
-  lines.push('  sink:');
-  lines.push(...indent(serializeNode(spec.spec.sink), 4));
+  lines.push('  edges:');
+  for (const edge of spec.spec.edges) {
+    lines.push(`    - from: ${edge.from}`);
+    lines.push(`      to: ${edge.to}`);
+  }
 
   return lines.join('\n') + '\n';
-}
-
-function serializeNode(node: { name: string; plugin: string; config?: Record<string, unknown> }): string[] {
-  const lines = [`name: ${node.name}`, `plugin: ${node.plugin}`];
-  if (node.config && Object.keys(node.config).length > 0) {
-    lines.push('config:');
-    lines.push(...indent(serializeConfig(node.config), 2));
-  }
-  return lines;
 }
 
 function serializeConfig(config: Record<string, unknown>, depth = 0): string[] {
