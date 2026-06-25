@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Eye,
   EyeOff,
@@ -13,7 +13,8 @@ import {
 
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
-import { submitPipeline } from '@/api/controlPlane';
+import { submitPipeline, getExecution } from '@/api/controlPlane';
+import type { ExecutionStatus } from '@/api/controlPlane';
 
 export function PipelineToolbar() {
   const name = usePipelineStore((s) => s.name);
@@ -35,6 +36,15 @@ export function PipelineToolbar() {
   const setSubmitStatus = useUIStore((s) => s.setSubmitStatus);
 
   const [validating, setValidating] = useState(false);
+  const [executionStatus, setExecutionStatus] = useState<ExecutionStatus | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clean up polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current !== null) clearInterval(pollingRef.current);
+    };
+  }, []);
 
   const handleValidate = () => {
     setValidating(true);
@@ -55,17 +65,71 @@ export function PipelineToolbar() {
       return;
     }
 
+    // Clear any previous run status and polling
+    setExecutionStatus(null);
+    if (pollingRef.current !== null) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
     setSubmitStatus('submitting');
+
     try {
       const spec = buildSpec();
       const response = await submitPipeline(spec, tenantId);
+
+      const initialStatus: ExecutionStatus = {
+        executionId: response.executionId,
+        pipelineId: response.pipelineId,
+        status: response.status,
+      };
+      setExecutionStatus(initialStatus);
+
+      if (response.status === 'succeeded' || response.status === 'failed') {
+        // Terminal state already — no polling needed
+        setSubmitStatus('success', {
+          executionId: response.executionId,
+          pipelineId: response.pipelineId,
+        });
+        return;
+      }
+
+      // pending or running — show result in button, poll until terminal
       setSubmitStatus('success', {
         executionId: response.executionId,
         pipelineId: response.pipelineId,
       });
+
+      pollingRef.current = setInterval(async () => {
+        try {
+          const updated = await getExecution(response.executionId, tenantId);
+          setExecutionStatus(updated);
+          if (updated.status === 'succeeded' || updated.status === 'failed') {
+            if (pollingRef.current !== null) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+          }
+        } catch {
+          if (pollingRef.current !== null) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          setExecutionStatus((prev) =>
+            prev !== null
+              ? { ...prev, status: 'failed', errorMessage: 'Failed to poll execution status' }
+              : prev,
+          );
+        }
+      }, 1500);
     } catch (err) {
       setSubmitStatus('error', {
         error: err instanceof Error ? err.message : 'Submission failed',
+      });
+      setExecutionStatus({
+        executionId: '',
+        pipelineId: '',
+        status: 'failed',
+        errorMessage: err instanceof Error ? err.message : 'Submission failed',
       });
     }
   };
@@ -168,6 +232,36 @@ export function PipelineToolbar() {
               ? 'Failed — Retry'
               : 'Submit'}
       </button>
+
+      {/* Execution status indicator */}
+      {executionStatus && (
+        <div
+          className={`flex items-center gap-1.5 text-xs whitespace-nowrap ${
+            executionStatus.status === 'succeeded'
+              ? 'text-green-400'
+              : executionStatus.status === 'failed'
+                ? 'text-red-400'
+                : 'text-yellow-400'
+          }`}
+        >
+          {(executionStatus.status === 'pending' || executionStatus.status === 'running') && (
+            <Loader2 size={14} className="animate-spin shrink-0" />
+          )}
+          {executionStatus.status === 'succeeded' && (
+            <CheckCircle2 size={14} className="shrink-0" />
+          )}
+          {executionStatus.status === 'failed' && (
+            <AlertCircle size={14} className="shrink-0" />
+          )}
+          <span>
+            {executionStatus.status === 'pending' || executionStatus.status === 'running'
+              ? 'Running...'
+              : executionStatus.status === 'succeeded'
+                ? 'Succeeded'
+                : `Failed${executionStatus.errorMessage ? ': ' + executionStatus.errorMessage : ''}`}
+          </span>
+        </div>
+      )}
     </header>
   );
 }

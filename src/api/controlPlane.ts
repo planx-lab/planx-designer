@@ -30,3 +30,23 @@ export function submitPipeline(
     body: JSON.stringify({ tenantId, projectId, specification }),
   });
 }
+
+/** Response from GET /executions/{id}. */
+export interface ExecutionStatus {
+  executionId: string;
+  pipelineId: string;
+  status: 'pending' | 'running' | 'succeeded' | 'failed';
+  createdAt?: string;
+  errorMessage?: string;
+}
+
+/** Poll the execution status from the engine. */
+export function getExecution(
+  executionId: string,
+  tenantId: string,
+): Promise<ExecutionStatus> {
+  // The engine serves GET /executions/{id}?tenantId=...
+  return api.get<ExecutionStatus>(
+    `/executions/${executionId}?tenantId=${encodeURIComponent(tenantId)}`,
+  );
+}
