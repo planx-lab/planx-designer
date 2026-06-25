@@ -42,17 +42,21 @@ export const PipelineNode = memo(function PipelineNode({
         cursor-pointer
       `}
     >
-      {/* Handles */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="!bg-border !w-3 !h-3"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!bg-border !w-3 !h-3"
-      />
+      {/* Handles — per kind constraints: source=output-only, sink=input-only, processor=both */}
+      {(data.nodeType === 'sink' || data.nodeType === 'processor') && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!bg-border !w-3 !h-3"
+        />
+      )}
+      {(data.nodeType === 'source' || data.nodeType === 'processor') && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="!bg-border !w-3 !h-3"
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
