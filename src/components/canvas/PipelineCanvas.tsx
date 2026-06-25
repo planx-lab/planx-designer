@@ -3,8 +3,9 @@ import {
   ReactFlow,
   Background,
   Controls,
-  type NodeChange,
+  type Edge,
   type Node,
+  type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -20,6 +21,9 @@ const proOptions = { hideAttribution: true };
 export function PipelineCanvas() {
   const nodes = usePipelineStore((s) => s.nodes);
   const edges = usePipelineStore((s) => s.edges);
+  const onConnect = usePipelineStore((s) => s.onConnect);
+  const onEdgesDelete = usePipelineStore((s) => s.onEdgesDelete);
+  const onNodesDelete = usePipelineStore((s) => s.onNodesDelete);
   const selectNode = useUIStore((s) => s.selectNode);
 
   const handleSelectionChange = useCallback(
@@ -41,11 +45,30 @@ export function PipelineCanvas() {
     [],
   );
 
+  const handleEdgesDelete = useCallback(
+    (deleted: Edge[]) => {
+      if (deleted.length === 0) return;
+      onEdgesDelete(deleted.map((e) => e.id));
+    },
+    [onEdgesDelete],
+  );
+
+  const handleNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      if (deleted.length === 0) return;
+      onNodesDelete(deleted.map((n) => n.id));
+    },
+    [onNodesDelete],
+  );
+
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      onConnect={onConnect}
+      onEdgesDelete={handleEdgesDelete}
+      onNodesDelete={handleNodesDelete}
       onNodesChange={handleNodesChange}
       onSelectionChange={handleSelectionChange}
       proOptions={proOptions}
