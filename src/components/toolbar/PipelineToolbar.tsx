@@ -262,6 +262,29 @@ export function PipelineToolbar() {
           </span>
         </div>
       )}
+
+      {/* Per-node status badges */}
+      {executionStatus?.nodeStatuses && Object.keys(executionStatus.nodeStatuses).length > 0 && (
+        <div className="flex flex-wrap gap-1.5 ml-2">
+          {Object.entries(executionStatus.nodeStatuses).map(([nodeId, ns]) => (
+            <div
+              key={nodeId}
+              className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${
+                ns.status === 'running'
+                  ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
+                  : ns.status === 'completed'
+                    ? 'bg-green-500/10 border-green-500/30 text-green-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+              }`}
+            >
+              {ns.status === 'completed' && <CheckCircle2 size={10} />}
+              {ns.status === 'failed' && <XCircle size={10} />}
+              {ns.status === 'running' && <Loader2 size={10} className="animate-spin" />}
+              <span className="truncate max-w-[80px]">{nodeId}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </header>
   );
 }

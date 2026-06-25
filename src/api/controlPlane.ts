@@ -38,6 +38,8 @@ export interface ExecutionStatus {
   status: 'pending' | 'running' | 'succeeded' | 'failed';
   createdAt?: string;
   errorMessage?: string;
+  /** Per-node lifecycle statuses during execution. Present when the engine emits them. */
+  nodeStatuses?: Record<string, { nodeId: string; status: string; error?: string }>;
 }
 
 /** Poll the execution status from the engine. */
