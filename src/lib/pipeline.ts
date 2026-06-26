@@ -10,12 +10,20 @@ export function buildSpec(
   edges: Edge[],
   metadata: { name: string; tenantId: string },
 ): PipelineSpec {
+  // ReactFlow node.id is an internal UUID; the spec id is the user-facing node
+  // name (dag-designer.md §4.3: src-1/proc-1/snk-1). Edges reference nodes by UUID
+  // internally, so map UUID → name to keep edge from/to consistent with node ids.
+  const nameById = new Map<string, string>(nodes.map((n) => [n.id, n.data.name]));
+
   const nodeSpecs: NodeSpec[] = nodes.map((n) => {
-    const spec: NodeSpec = { id: n.id, kind: n.data.nodeType as PluginType, plugin: n.data.plugin };
+    const spec: NodeSpec = { id: n.data.name, kind: n.data.nodeType as PluginType, plugin: n.data.plugin };
     if (n.data.config && Object.keys(n.data.config).length > 0) spec.config = n.data.config;
     return spec;
   });
-  const edgeSpecs: EdgeSpec[] = edges.map((e) => ({ from: e.source, to: e.target }));
+  const edgeSpecs: EdgeSpec[] = edges.map((e) => ({
+    from: nameById.get(e.source) ?? e.source,
+    to: nameById.get(e.target) ?? e.target,
+  }));
   return {
     apiVersion: 'planx.io/v4',
     kind: 'Pipeline',

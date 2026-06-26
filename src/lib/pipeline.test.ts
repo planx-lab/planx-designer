@@ -66,6 +66,29 @@ describe('buildSpec (DAG)', () => {
     expect(spec.spec.nodes[0].config).toBeUndefined();
     expect(spec.spec.nodes[1].config).toEqual({ a: 1 });
   });
+
+  it('uses the node name (not the ReactFlow UUID) as spec id — dag-designer.md §4.3', () => {
+    // Real runtime: ReactFlow node.id is crypto.randomUUID() (often digit-leading),
+    // data.name is the generated src-1/proc-1/snk-1. The spec id MUST be the human
+    // name, else validateSpec's NODE_ID_RE (^[a-zA-Z]) rejects digit-leading UUIDs
+    // and Submit is blocked.
+    const nodes: PipelineNode[] = [
+      makeNode({ nodeType: 'source', name: 'src-1', plugin: 'source-hello' }, '8ed69e45-aaaa'),
+      makeNode({ nodeType: 'processor', name: 'proc-1', plugin: 'p' }, 'f54ddb0c-bbbb'),
+      makeNode({ nodeType: 'sink', name: 'snk-1', plugin: 'sink-stdout' }, '02912054-cccc'),
+    ];
+    const edges: Edge[] = [
+      { id: 'e1', source: '8ed69e45-aaaa', target: 'f54ddb0c-bbbb' },
+      { id: 'e2', source: 'f54ddb0c-bbbb', target: '02912054-cccc' },
+    ];
+    const spec = buildSpec(nodes, edges, { name: 'demo', tenantId: 't1' });
+    expect(spec.spec.nodes.map((n) => n.id)).toEqual(['src-1', 'proc-1', 'snk-1']);
+    expect(spec.spec.edges).toEqual([
+      { from: 'src-1', to: 'proc-1' },
+      { from: 'proc-1', to: 'snk-1' },
+    ]);
+    expect(validateSpec(spec).valid).toBe(true);
+  });
 });
 
 // ── fromSpec (DAG round-trip) ────────────────────────────

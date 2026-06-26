@@ -19,16 +19,25 @@ export async function getPlugins(): Promise<Record<string, PluginDescriptor>> {
   return byName;
 }
 
+/** Engine returns UPPERCASE pipeline-level status (model.ExecutionStatus:
+ * PENDING/RUNNING/SUCCEEDED/FAILED); the Designer contract is lowercase (matches
+ * node-level NodeStatus in dag_run.go + alpha spec success criteria #4). Normalize
+ * at the API boundary so toolbar/polling comparisons against lowercase hold. */
+export function normalizeStatus<R extends { status: string }>(r: R): R {
+  return { ...r, status: r.status.toLowerCase() as R['status'] };
+}
+
 /** Submit a pipeline spec for execution. */
-export function submitPipeline(
+export async function submitPipeline(
   specification: PipelineSpec,
   tenantId: string,
   projectId?: string,
 ): Promise<CreatePipelineResponse> {
-  return api.get<CreatePipelineResponse>('/pipelines', {
+  const r = await api.get<CreatePipelineResponse>('/pipelines', {
     method: 'POST',
     body: JSON.stringify({ tenantId, projectId, specification }),
   });
+  return normalizeStatus(r);
 }
 
 /** Response from GET /executions/{id}. */
@@ -43,12 +52,13 @@ export interface ExecutionStatus {
 }
 
 /** Poll the execution status from the engine. */
-export function getExecution(
+export async function getExecution(
   executionId: string,
   tenantId: string,
 ): Promise<ExecutionStatus> {
   // The engine serves GET /executions/{id}?tenantId=...
-  return api.get<ExecutionStatus>(
+  const r = await api.get<ExecutionStatus>(
     `/executions/${executionId}?tenantId=${encodeURIComponent(tenantId)}`,
   );
+  return normalizeStatus(r);
 }

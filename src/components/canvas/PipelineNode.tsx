@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 import type { PipelineNodeData } from '@/types/node';
 import { usePipelineStore } from '@/stores/usePipelineStore';
@@ -95,13 +95,6 @@ export const PipelineNode = memo(function PipelineNode({
         <div className="mt-2 flex items-center gap-1.5">
           <div className="h-1.5 w-1.5 rounded-full bg-accent" />
           <span className="text-foreground/50 text-[10px]">Configured</span>
-        </div>
-      )}
-
-      {/* Drag handle (visual only — reorder via dnd later) */}
-      {data.nodeType === 'processor' && (
-        <div className="absolute -left-3 top-1/2 -translate-y-1/2 text-foreground/20">
-          <GripVertical size={16} />
         </div>
       )}
     </div>
