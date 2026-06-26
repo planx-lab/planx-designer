@@ -64,6 +64,17 @@ export function PluginPalette() {
     addNode(activeTab, plugin.name, c.displayName || plugin.name);
   };
 
+  const handleDragStart = (e: React.DragEvent, c: Connector) => {
+    const plugin = c.capabilities[activeTab];
+    if (!plugin) return;
+    e.dataTransfer.setData('application/planx-plugin', JSON.stringify({
+      type: activeTab,
+      plugin: plugin.name,
+      label: c.displayName || plugin.name,
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 gap-3">
@@ -126,8 +137,10 @@ export function PluginPalette() {
           return (
             <button
               key={c.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, c)}
               onClick={() => handleAdd(c)}
-              className="w-full text-left p-3 rounded-lg border border-border hover:border-accent/40 hover:bg-surface-hover transition-all duration-150 group"
+              className="w-full text-left p-3 rounded-lg border border-border hover:border-accent/40 hover:bg-surface-hover transition-all duration-150 group cursor-grab active:cursor-grabbing"
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground/80 group-hover:text-foreground truncate">

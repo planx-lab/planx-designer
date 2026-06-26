@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -6,6 +6,7 @@ import {
   type Edge,
   type Node,
   type NodeChange,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -13,6 +14,7 @@ import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { PipelineNode } from './PipelineNode';
 import type { PipelineNode as PipelineNodeType } from '@/types/node';
+import type { PluginType } from '@/types/plugin';
 
 const nodeTypes = { pipelineNode: PipelineNode };
 
@@ -24,7 +26,11 @@ export function PipelineCanvas() {
   const onConnect = usePipelineStore((s) => s.onConnect);
   const onEdgesDelete = usePipelineStore((s) => s.onEdgesDelete);
   const onNodesDelete = usePipelineStore((s) => s.onNodesDelete);
+  const applyNodeChanges = usePipelineStore((s) => s.applyNodeChanges);
+  const addNodeAt = usePipelineStore((s) => s.addNodeAt);
   const selectNode = useUIStore((s) => s.selectNode);
+  const { screenToFlowPosition } = useReactFlow();
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const handleSelectionChange = useCallback(
     ({ nodes: selected }: { nodes: Node[] }) => {
@@ -38,11 +44,13 @@ export function PipelineCanvas() {
   );
 
   const handleNodesChange = useCallback(
-    (_changes: NodeChange<PipelineNodeType>[]) => {
-      // Node positions are managed by computeLayout().
-      // We ignore manual position changes to enforce auto-layout.
+    (changes: NodeChange<PipelineNodeType>[]) => {
+      // dag-designer.md §5.5: nodes are draggable. Delegate to store's
+      // applyNodeChanges which handles position, selection, and removal
+      // (with source/sink cardinality protection).
+      applyNodeChanges(changes);
     },
-    [],
+    [applyNodeChanges],
   );
 
   const handleEdgesDelete = useCallback(
@@ -61,8 +69,31 @@ export function PipelineCanvas() {
     [onNodesDelete],
   );
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const raw = e.dataTransfer.getData('application/planx-plugin');
+      if (!raw) return;
+      const { type, plugin, label } = JSON.parse(raw) as {
+        type: PluginType;
+        plugin: string;
+        label: string;
+      };
+      // Convert screen coords to ReactFlow canvas coords
+      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      addNodeAt(type, plugin, label, position.x, position.y);
+    },
+    [addNodeAt, screenToFlowPosition],
+  );
+
   return (
-    <ReactFlow
+    <div ref={wrapperRef} className="w-full h-full" onDrop={handleDrop} onDragOver={handleDragOver}>
+      <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
@@ -81,5 +112,6 @@ export function PipelineCanvas() {
       <Background color="#334155" gap={20} />
       <Controls className="!bg-surface !border-border !rounded-lg" />
     </ReactFlow>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Edge, Connection } from '@xyflow/react';
+import { applyNodeChanges as rfApplyNodeChanges, type Edge, type Connection, type NodeChange } from '@xyflow/react';
 import type { PipelineNode } from '@/types/node';
 import type { PluginType } from '@/types/plugin';
 import type { PipelineSpec } from '@/types/pipeline';
@@ -35,6 +35,8 @@ interface PipelineActions {
   setTenantId: (id: string) => void;
 
   addNode: (type: PluginType, plugin: string, pluginLabel: string) => PipelineNode;
+  /** Add a node at a specific canvas position (for drag-from-palette). dag-designer.md §5.2. */
+  addNodeAt: (type: PluginType, plugin: string, pluginLabel: string, x: number, y: number) => PipelineNode;
   removeNode: (id: string) => void;
 
   setNodeName: (id: string, name: string) => void;
@@ -45,6 +47,9 @@ interface PipelineActions {
   onConnect: (conn: Connection) => void;
   onEdgesDelete: (edgeIds: string[]) => void;
   onNodesDelete: (nodeIds: string[]) => void;
+
+  /** Apply ReactFlow node changes (position drag, selection, removal). dag-designer.md §5.5. */
+  applyNodeChanges: (changes: NodeChange[]) => void;
 
   loadSpec: (spec: PipelineSpec) => void;
   buildSpec: () => PipelineSpec;
@@ -83,6 +88,41 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
         id: crypto.randomUUID(),
         type: 'pipelineNode',
         position: { x: 100 + (nodes.length % 3) * 300, y: 100 + Math.floor(nodes.length / 3) * 200 },
+        data: {
+          nodeType: type,
+          name: generateNodeName(type, existing),
+          plugin,
+          pluginLabel,
+          config: {},
+          isValid: true,
+        },
+      };
+
+      let updated = [...nodes];
+
+      if (type === 'source') {
+        updated = updated.filter((n) => n.data.nodeType !== 'source');
+        updated.unshift(node);
+      } else if (type === 'sink') {
+        updated = updated.filter((n) => n.data.nodeType !== 'sink');
+        updated.push(node);
+      } else {
+        updated.push(node);
+      }
+
+      get()._sync(updated);
+      return node;
+    },
+
+    addNodeAt: (type, plugin, pluginLabel, x, y) => {
+      get()._pushHistory();
+      const { nodes } = get();
+      const existing = nodes.map((n) => n.data.name);
+
+      const node: PipelineNode = {
+        id: crypto.randomUUID(),
+        type: 'pipelineNode',
+        position: { x, y },
         data: {
           nodeType: type,
           name: generateNodeName(type, existing),
@@ -148,6 +188,19 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     },
 
     // ── Edge lifecycle (DAG) ──
+
+    applyNodeChanges: (changes) => {
+      // dag-designer.md §5.5: nodes are draggable. ReactFlow's applyNodeChanges
+      // handles position drag, selection, and removal. We filter out 'remove'
+      // changes for source/sink (cardinality protection in removeNode).
+      const safeChanges = changes.filter((c) => {
+        if (c.type !== 'remove') return true;
+        const node = get().nodes.find((n) => n.id === c.id);
+        return node && node.data.nodeType === 'processor';
+      });
+      const updated = rfApplyNodeChanges(safeChanges, get().nodes) as PipelineNode[];
+      set({ nodes: updated });
+    },
 
     onConnect: (conn) => {
       const { nodes, edges } = get();
