@@ -5,7 +5,6 @@ import { usePaletteStore } from '@/stores/usePaletteStore';
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import type { ComponentKind } from '@/types/plugin';
 import type { PaletteItem } from '@/lib/connectors';
-import { groupComponentsByKind } from '@/lib/connectors';
 
 const PLUGIN_BADGE =
   'bg-surface-hover text-foreground/50 border border-border';
@@ -25,10 +24,11 @@ export function PluginPalette() {
   const loading = usePaletteStore((s) => s.loading);
   const fetchPlugins = usePaletteStore((s) => s.fetchPlugins);
   const addNode = usePipelineStore((s) => s.addNode);
+  const getItemsByKind = usePaletteStore((s) => s.getItemsByKind);
 
   const itemsByKind = useMemo(
-    () => groupComponentsByKind(plugins),
-    [plugins],
+    () => getItemsByKind(),
+    [getItemsByKind, plugins],
   );
 
   const filtered = useMemo(() => {
