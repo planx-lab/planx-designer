@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { EditorView, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { json, jsonParseLinter } from '@codemirror/lang-json';
@@ -13,9 +13,9 @@ export function ConfigPanel() {
   const selectedNodeId = useUIStore((s) => s.selectedNodeId);
   const nodes = usePipelineStore((s) => s.nodes);
   const setNodeName = usePipelineStore((s) => s.setNodeName);
-  const setPlugin = usePipelineStore((s) => s.setPlugin);
+  const setComponent = usePipelineStore((s) => s.setComponent);
   const setConfig = usePipelineStore((s) => s.setConfig);
-  const getByType = usePaletteStore((s) => s.getByType);
+  const getItemsByKind = usePaletteStore((s) => s.getItemsByKind);
 
   const node = nodes.find((n) => n.id === selectedNodeId);
 
@@ -29,7 +29,10 @@ export function ConfigPanel() {
     );
   }
 
-  const plugins = getByType(node.data.nodeType);
+  const components = useMemo(
+    () => getItemsByKind()[node.data.nodeType] ?? [],
+    [getItemsByKind, node.data.nodeType],
+  );
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -41,7 +44,7 @@ export function ConfigPanel() {
           </span>
         </div>
         <h3 className="text-foreground font-medium truncate">
-          {node.data.pluginLabel || node.data.plugin || 'Unconfigured'}
+          {node.data.pluginLabel || node.data.pluginId || 'Unconfigured'}
         </h3>
         {node.data.name && (
           <p className="text-foreground/40 text-xs mt-0.5">{node.data.name}</p>
@@ -64,26 +67,35 @@ export function ConfigPanel() {
           />
         </div>
 
-        {/* Plugin selector */}
+        {/* Component selector */}
         <div>
           <label className="block text-xs font-medium text-foreground/60 mb-1">
-            Plugin
+            Component
           </label>
           <select
-            value={node.data.plugin}
+            value={`${node.data.pluginId}/${node.data.componentId}`}
             onChange={(e) => {
-              const selected = plugins.find((p) => p.name === e.target.value);
-              setPlugin(
-                node.id,
-                e.target.value,
-                selected?.displayName ?? selected?.name ?? e.target.value,
+              const [pluginId, componentId] = e.target.value.split('/');
+              const item = components.find(
+                (c) => c.pluginId === pluginId && c.componentId === componentId,
               );
+              if (item) {
+                setComponent(
+                  node.id,
+                  item.pluginId,
+                  item.componentId,
+                  item.componentDisplayName,
+                );
+              }
             }}
             className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
           >
-            {plugins.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.displayName || p.name}
+            {components.map((item) => (
+              <option
+                key={`${item.pluginId}/${item.componentId}`}
+                value={`${item.pluginId}/${item.componentId}`}
+              >
+                {item.pluginDisplayName} / {item.componentDisplayName}
               </option>
             ))}
           </select>
