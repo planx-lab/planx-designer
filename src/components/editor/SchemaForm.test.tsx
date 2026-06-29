@@ -1,0 +1,208 @@
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { SchemaForm } from './SchemaForm';
+import type { ConfigSchema } from '@/types/plugin';
+import '@testing-library/jest-dom/vitest';
+
+afterEach(cleanup);
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+function makeSchema(fields: ConfigSchema['fields']): ConfigSchema {
+  return { fields };
+}
+
+// ── Field rendering ──────────────────────────────────────────────────
+
+describe('SchemaForm — field rendering', () => {
+  it('renders a STRING field as <input type="text"> with label', () => {
+    const schema = makeSchema([
+      { name: 'host', type: 'STRING', label: 'Host' },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    expect(screen.getByLabelText('Host')).toBeInTheDocument();
+    const input = screen.getByLabelText('Host') as HTMLInputElement;
+    expect(input.type).toBe('text');
+  });
+
+  it('renders an INTEGER field as <input type="number">', () => {
+    const schema = makeSchema([
+      { name: 'port', type: 'INTEGER' },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const input = screen.getByRole('spinbutton') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.type).toBe('number');
+  });
+
+  it('renders a BOOLEAN field as <input type="checkbox">', () => {
+    const schema = makeSchema([
+      { name: 'tls', type: 'BOOLEAN' },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const input = screen.getByRole('checkbox') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.type).toBe('checkbox');
+  });
+
+  it('renders a SECRET field as <input type="password">', () => {
+    const schema = makeSchema([
+      { name: 'api_key', type: 'SECRET' },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const input = screen.getByLabelText('api_key') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.type).toBe('password');
+  });
+
+  it('renders an ENUM field as <select> with options', () => {
+    const schema = makeSchema([
+      { name: 'mode', type: 'ENUM', label: 'Mode', enumValues: ['fast', 'safe'] },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const select = screen.getByLabelText('Mode') as HTMLSelectElement;
+    expect(select).toBeInTheDocument();
+    expect(select.tagName).toBe('SELECT');
+    expect(select.options).toHaveLength(2);
+    expect(select.options[0].value).toBe('fast');
+    expect(select.options[1].value).toBe('safe');
+  });
+});
+
+// ── Value binding + onChange ─────────────────────────────────────────
+
+describe('SchemaForm — value binding and onChange', () => {
+  it('calls onChange with string value when STRING field changes', () => {
+    const onChange = vi.fn();
+    const schema = makeSchema([
+      { name: 'host', type: 'STRING', label: 'Host' },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('Host'), {
+      target: { value: 'localhost' },
+    });
+    expect(onChange).toHaveBeenCalledWith({ host: 'localhost' });
+  });
+
+  it('calls onChange with numeric value when INTEGER field changes', () => {
+    const onChange = vi.fn();
+    const schema = makeSchema([
+      { name: 'port', type: 'INTEGER', label: 'Port' },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('Port'), {
+      target: { value: '5432' },
+    });
+    expect(onChange).toHaveBeenCalledWith({ port: 5432 });
+  });
+
+  it('calls onChange with boolean value when BOOLEAN field changes', () => {
+    const onChange = vi.fn();
+    const schema = makeSchema([
+      { name: 'tls', type: 'BOOLEAN', label: 'TLS' },
+    ]);
+    const { rerender } = render(
+      <SchemaForm schema={schema} value={{ tls: false }} onChange={onChange} />,
+    );
+
+    const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
+    fireEvent.click(checkbox);
+    expect(onChange).toHaveBeenCalledWith({ tls: true });
+  });
+
+  it('calls onChange with enum value when ENUM field changes', () => {
+    const onChange = vi.fn();
+    const schema = makeSchema([
+      { name: 'mode', type: 'ENUM', label: 'Mode', enumValues: ['fast', 'safe'] },
+    ]);
+    render(<SchemaForm schema={schema} value={{ mode: 'fast' }} onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('Mode'), {
+      target: { value: 'safe' },
+    });
+    expect(onChange).toHaveBeenCalledWith({ mode: 'safe' });
+  });
+
+  it('preserves other field values when one field changes', () => {
+    const onChange = vi.fn();
+    const schema = makeSchema([
+      { name: 'host', type: 'STRING', label: 'Host' },
+      { name: 'port', type: 'INTEGER', label: 'Port' },
+    ]);
+    render(
+      <SchemaForm
+        schema={schema}
+        value={{ host: 'example.com', port: 8080 }}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Host'), {
+      target: { value: 'localhost' },
+    });
+    expect(onChange).toHaveBeenCalledWith({ host: 'localhost', port: 8080 });
+  });
+});
+
+// ── Required + defaults + placeholder ────────────────────────────────
+
+describe('SchemaForm — required, defaults, and placeholder', () => {
+  it('shows a red asterisk for required fields', () => {
+    const schema = makeSchema([
+      { name: 'host', type: 'STRING', label: 'Host', required: true },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const label = screen.getByText('Host');
+    expect(label.closest('label')?.innerHTML).toContain('*');
+    // The asterisk should be styled with a "red" / destructive color class
+    const asterisk = label.closest('label')?.querySelector('.text-destructive');
+    expect(asterisk).toBeInTheDocument();
+  });
+
+  it('applies default value when value is empty', () => {
+    const schema = makeSchema([
+      {
+        name: 'host',
+        type: 'STRING',
+        label: 'Host',
+        defaultValue: { stringValue: 'localhost' },
+      },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const input = screen.getByLabelText('Host') as HTMLInputElement;
+    expect(input.value).toBe('localhost');
+  });
+
+  it('renders placeholder attribute on input', () => {
+    const schema = makeSchema([
+      { name: 'host', type: 'STRING', label: 'Host', placeholder: 'e.g. localhost' },
+    ]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const input = screen.getByLabelText('Host') as HTMLInputElement;
+    expect(input.placeholder).toBe('e.g. localhost');
+  });
+});
+
+// ── Empty schema ─────────────────────────────────────────────────────
+
+describe('SchemaForm — empty schema', () => {
+  it('renders nothing when schema has no fields', () => {
+    const schema = makeSchema([]);
+    const { container } = render(
+      <SchemaForm schema={schema} value={{}} onChange={() => {}} />,
+    );
+
+    // Should render an empty div container
+    expect(container.firstElementChild?.children.length ?? 0).toBe(0);
+  });
+});

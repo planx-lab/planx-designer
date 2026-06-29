@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { EditorView, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { json, jsonParseLinter } from '@codemirror/lang-json';
@@ -8,6 +8,7 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { usePaletteStore } from '@/stores/usePaletteStore';
+import { SchemaForm } from './SchemaForm';
 
 export function ConfigPanel() {
   const selectedNodeId = useUIStore((s) => s.selectedNodeId);
@@ -20,11 +21,25 @@ export function ConfigPanel() {
 
   const node = nodes.find((n) => n.id === selectedNodeId);
 
+  const [showRawJson, setShowRawJson] = useState(false);
+
   // Always call useMemo before any early return to preserve hook ordering.
   const components = useMemo(
     () => (node ? getItemsByKind()[node.data.nodeType] ?? [] : []),
     [getItemsByKind, plugins, node?.data?.nodeType],
   );
+
+  // Find the selected component's configSchema from palette plugin data.
+  const configSchema = useMemo(() => {
+    if (!node?.data?.pluginId) return undefined;
+    const plugin = plugins.find((p) => p.id === node.data.pluginId);
+    const component = plugin?.components.find(
+      (c) => c.id === node.data.componentId,
+    );
+    return component?.configSchema;
+  }, [plugins, node?.data?.pluginId, node?.data?.componentId]);
+
+  const hasSchema = configSchema && configSchema.fields.length > 0;
 
   if (!node) {
     return (
@@ -106,15 +121,37 @@ export function ConfigPanel() {
 
       {/* Config editor */}
       <div className="flex-1 p-4">
-        <label className="block text-xs font-medium text-foreground/60 mb-2">
-          Config (JSON)
-        </label>
-        <div className="rounded-lg border border-border overflow-hidden">
-          <JsonEditorField
-            value={node.data.config}
-            onChange={(config) => setConfig(node.id, config)}
-          />
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-xs font-medium text-foreground/60">
+            Config
+          </label>
+          {hasSchema && (
+            <button
+              type="button"
+              onClick={() => setShowRawJson((v) => !v)}
+              className="text-accent text-xs hover:underline"
+            >
+              {showRawJson ? 'Schema Form' : 'Raw JSON'}
+            </button>
+          )}
         </div>
+
+        {hasSchema && !showRawJson ? (
+          <div className="rounded-lg border border-border p-4">
+            <SchemaForm
+              schema={configSchema}
+              value={node.data.config}
+              onChange={(config) => setConfig(node.id, config)}
+            />
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <JsonEditorField
+              value={node.data.config}
+              onChange={(config) => setConfig(node.id, config)}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
