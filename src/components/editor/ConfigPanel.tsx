@@ -46,6 +46,11 @@ export function ConfigPanel() {
 
   const hasSchema = configSchema && configSchema.fields.length > 0;
 
+  // Reset validation state when config changes
+  useEffect(() => {
+    setValidateState({ status: 'idle' });
+  }, [node?.data?.config]);
+
   if (!node) {
     return (
       <div className="flex h-full items-center justify-center p-6">
@@ -163,11 +168,15 @@ export function ConfigPanel() {
           type="button"
           disabled={validateState.status === 'loading'}
           onClick={async () => {
+            if (!node.data.pluginId || !node.data.componentId) {
+              setValidateState({ status: 'error', message: 'Select a component first' });
+              return;
+            }
             setValidateState({ status: 'loading' });
             try {
               const result = await validateConfig(
-                node.data.pluginId ?? '',
-                node.data.componentId ?? '',
+                node.data.pluginId,
+                node.data.componentId,
                 node.data.config,
               );
               setValidateState(
