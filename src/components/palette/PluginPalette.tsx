@@ -3,33 +3,21 @@ import { Plus, Search } from 'lucide-react';
 
 import { usePaletteStore } from '@/stores/usePaletteStore';
 import { usePipelineStore } from '@/stores/usePipelineStore';
-import type { PluginType } from '@/types/plugin';
-import {
-  groupPluginsByConnector,
-  connectorCapabilityList,
-  type Connector,
-} from '@/lib/connectors';
+import type { ComponentKind } from '@/types/plugin';
+import type { PaletteItem } from '@/lib/connectors';
+import { groupComponentsByKind } from '@/lib/connectors';
 
-const tabs: { type: PluginType; label: string }[] = [
+const PLUGIN_BADGE =
+  'bg-surface-hover text-foreground/50 border border-border';
+
+const tabs: { type: ComponentKind; label: string }[] = [
   { type: 'source', label: 'Sources' },
   { type: 'processor', label: 'Processors' },
   { type: 'sink', label: 'Sinks' },
 ];
 
-const KIND_LABEL: Record<PluginType, string> = {
-  source: 'Source',
-  processor: 'Processor',
-  sink: 'Sink',
-};
-
-const KIND_BADGE: Record<PluginType, string> = {
-  source: 'bg-blue-500/15 text-blue-300',
-  processor: 'bg-amber-500/15 text-amber-300',
-  sink: 'bg-emerald-500/15 text-emerald-300',
-};
-
 export function PluginPalette() {
-  const [activeTab, setActiveTab] = useState<PluginType>('source');
+  const [activeTab, setActiveTab] = useState<ComponentKind>('source');
   const [search, setSearch] = useState('');
 
   const plugins = usePaletteStore((s) => s.plugins);
@@ -38,40 +26,41 @@ export function PluginPalette() {
   const fetchPlugins = usePaletteStore((s) => s.fetchPlugins);
   const addNode = usePipelineStore((s) => s.addNode);
 
-  // Group flat plugins into Connectors, then keep only those that
-  // implement the active capability tab.
-  const connectors = useMemo(
-    () => groupPluginsByConnector(Object.values(plugins)),
+  const itemsByKind = useMemo(
+    () => groupComponentsByKind(plugins),
     [plugins],
   );
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return connectors
-      .filter((c) => c.capabilities[activeTab])
-      .filter(
-        (c) =>
-          q === '' ||
-          `${c.displayName} ${c.description ?? ''}`
-            .toLowerCase()
-            .includes(q),
-      );
-  }, [connectors, activeTab, search]);
+    return (itemsByKind[activeTab] ?? []).filter(
+      (item) =>
+        q === '' ||
+        `${item.componentDisplayName} ${item.description ?? ''}`
+          .toLowerCase()
+          .includes(q),
+    );
+  }, [itemsByKind, activeTab, search]);
 
-  const handleAdd = (c: Connector) => {
-    const plugin = c.capabilities[activeTab];
-    if (!plugin) return;
-    addNode(activeTab, plugin.name, c.displayName || plugin.name);
+  const handleAdd = (item: PaletteItem) => {
+    addNode(
+      item.kind,
+      item.pluginId,
+      item.componentId,
+      item.componentDisplayName,
+    );
   };
 
-  const handleDragStart = (e: React.DragEvent, c: Connector) => {
-    const plugin = c.capabilities[activeTab];
-    if (!plugin) return;
-    e.dataTransfer.setData('application/planx-plugin', JSON.stringify({
-      type: activeTab,
-      plugin: plugin.name,
-      label: c.displayName || plugin.name,
-    }));
+  const handleDragStart = (e: React.DragEvent, item: PaletteItem) => {
+    e.dataTransfer.setData(
+      'application/planx-plugin',
+      JSON.stringify({
+        kind: item.kind,
+        plugin_id: item.pluginId,
+        component_id: item.componentId,
+        label: item.componentDisplayName,
+      }),
+    );
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -100,7 +89,7 @@ export function PluginPalette() {
           />
           <input
             type="text"
-            placeholder="Filter connectors…"
+            placeholder="Filter components…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-muted border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
@@ -108,7 +97,7 @@ export function PluginPalette() {
         </div>
       </div>
 
-      {/* Capability tabs */}
+      {/* Kind tabs */}
       <div className="flex border-b border-border">
         {tabs.map(({ type, label }) => (
           <button
@@ -125,57 +114,42 @@ export function PluginPalette() {
         ))}
       </div>
 
-      {/* Connector list */}
+      {/* Component list */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {filtered.length === 0 && (
           <p className="text-foreground/30 text-xs text-center py-8">
-            {loading ? 'Loading…' : 'No connectors found'}
+            {loading ? 'Loading…' : 'No components found'}
           </p>
         )}
-        {filtered.map((c) => {
-          const caps = connectorCapabilityList(c);
-          return (
-            <button
-              key={c.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, c)}
-              onClick={() => handleAdd(c)}
-              className="w-full text-left p-3 rounded-lg border border-border hover:border-accent/40 hover:bg-surface-hover transition-all duration-150 group cursor-grab active:cursor-grabbing"
+        {filtered.map((item) => (
+          <button
+            key={`${item.pluginId}/${item.componentId}`}
+            draggable
+            onDragStart={(e) => handleDragStart(e, item)}
+            onClick={() => handleAdd(item)}
+            className="w-full text-left p-3 rounded-lg border border-border hover:border-accent/40 hover:bg-surface-hover transition-all duration-150 group cursor-grab active:cursor-grabbing"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground/80 group-hover:text-foreground truncate">
+                {item.componentDisplayName}
+              </span>
+              <Plus
+                size={14}
+                className="text-foreground/20 group-hover:text-accent transition-colors shrink-0 ml-2"
+              />
+            </div>
+            <span
+              className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide mt-1 ${PLUGIN_BADGE}`}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground/80 group-hover:text-foreground truncate">
-                  {c.displayName}
-                </span>
-                <Plus
-                  size={14}
-                  className="text-foreground/20 group-hover:text-accent transition-colors shrink-0 ml-2"
-                />
-              </div>
-              {c.description && (
-                <p className="text-foreground/40 text-[11px] mt-0.5 truncate">
-                  {c.description}
-                </p>
-              )}
-              {/* Capability badges — active kind solid, others faded */}
-              {caps.length > 0 && (
-                <div className="flex gap-1 mt-2">
-                  {caps.map((k) => (
-                    <span
-                      key={k}
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide ${
-                        k === activeTab
-                          ? KIND_BADGE[k]
-                          : 'bg-foreground/5 text-foreground/30'
-                      }`}
-                    >
-                      {KIND_LABEL[k]}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </button>
-          );
-        })}
+              {item.pluginDisplayName}
+            </span>
+            {item.description && (
+              <p className="text-foreground/40 text-[11px] mt-0.5 truncate">
+                {item.description}
+              </p>
+            )}
+          </button>
+        ))}
       </div>
     </div>
   );
