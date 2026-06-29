@@ -68,11 +68,12 @@ describe('usePipelineStore — DAG node drag (dag-designer.md §5.5)', () => {
     usePipelineStore.getState().reset('test');
     const { addNodeAt } = usePipelineStore.getState();
 
-    const node = addNodeAt('source', 'source-hello', 'Source Hello', 250, 150);
+    const node = addNodeAt('source', 'source-hello', 'source', 'Source Hello', 250, 150);
 
     expect(node.position).toEqual({ x: 250, y: 150 });
     expect(node.data.nodeType).toBe('source');
     expect(node.data.pluginId).toBe('source-hello');
+    expect(node.data.componentId).toBe('source');
 
     const stored = usePipelineStore.getState().nodes.find((n) => n.id === node.id);
     expect(stored?.position).toEqual({ x: 250, y: 150 });

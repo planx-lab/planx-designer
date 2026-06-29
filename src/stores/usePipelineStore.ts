@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { applyNodeChanges as rfApplyNodeChanges, type Edge, type Connection, type NodeChange } from '@xyflow/react';
 import type { PipelineNode } from '@/types/node';
-import type { PluginType } from '@/types/plugin';
+import type { ComponentKind } from '@/types/plugin';
 import type { PipelineSpec } from '@/types/pipeline';
 import {
   buildSpec,
@@ -34,13 +34,13 @@ interface PipelineActions {
   setName: (name: string) => void;
   setTenantId: (id: string) => void;
 
-  addNode: (type: PluginType, plugin: string, pluginLabel: string) => PipelineNode;
+  addNode: (type: ComponentKind, pluginId: string, componentId: string, pluginLabel: string) => PipelineNode;
   /** Add a node at a specific canvas position (for drag-from-palette). dag-designer.md §5.2. */
-  addNodeAt: (type: PluginType, plugin: string, pluginLabel: string, x: number, y: number) => PipelineNode;
+  addNodeAt: (type: ComponentKind, pluginId: string, componentId: string, pluginLabel: string, x: number, y: number) => PipelineNode;
   removeNode: (id: string) => void;
 
   setNodeName: (id: string, name: string) => void;
-  setPlugin: (id: string, plugin: string, label: string) => void;
+  setComponent: (id: string, pluginId: string, componentId: string, label: string) => void;
   setConfig: (id: string, config: Record<string, unknown>) => void;
 
   /** Edge lifecycle (DAG — user-authored). */
@@ -79,7 +79,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     setName: (name) => set({ name }),
     setTenantId: (tenantId) => set({ tenantId }),
 
-    addNode: (type, plugin, pluginLabel) => {
+    addNode: (type, pluginId, componentId, pluginLabel) => {
       get()._pushHistory();
       const { nodes } = get();
       const existing = nodes.map((n) => n.data.name);
@@ -91,7 +91,8 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
         data: {
           nodeType: type,
           name: generateNodeName(type, existing),
-          plugin,
+          pluginId,
+          componentId,
           pluginLabel,
           config: {},
           isValid: true,
@@ -114,7 +115,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
       return node;
     },
 
-    addNodeAt: (type, plugin, pluginLabel, x, y) => {
+    addNodeAt: (type, pluginId, componentId, pluginLabel, x, y) => {
       get()._pushHistory();
       const { nodes } = get();
       const existing = nodes.map((n) => n.data.name);
@@ -126,7 +127,8 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
         data: {
           nodeType: type,
           name: generateNodeName(type, existing),
-          plugin,
+          pluginId,
+          componentId,
           pluginLabel,
           config: {},
           isValid: true,
@@ -171,10 +173,10 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
       set({ nodes: updated });
     },
 
-    setPlugin: (id, plugin, label) => {
+    setComponent: (id, pluginId, componentId, label) => {
       const updated = get().nodes.map((n) =>
         n.id === id
-          ? { ...n, data: { ...n.data, plugin, pluginLabel: label } }
+          ? { ...n, data: { ...n.data, pluginId, componentId, pluginLabel: label } }
           : n,
       );
       set({ nodes: updated });
