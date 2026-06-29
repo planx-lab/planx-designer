@@ -1,4 +1,4 @@
-import type { ConfigSchema, ConfigField, FieldType } from '@/types/plugin';
+import type { ConfigSchema, ConfigField } from '@/types/plugin';
 
 interface SchemaFormProps {
   schema: ConfigSchema;
@@ -27,7 +27,7 @@ function getCurrentValue(value: Record<string, unknown>, field: ConfigField): un
 
 export function SchemaForm({ schema, value, onChange }: SchemaFormProps) {
   if (schema.fields.length === 0) {
-    return <div />;
+    return null;
   }
 
   const handleChange = (field: ConfigField, newValue: unknown) => {
@@ -37,7 +37,7 @@ export function SchemaForm({ schema, value, onChange }: SchemaFormProps) {
   const renderControl = (field: ConfigField) => {
     const currentValue = getCurrentValue(value, field);
 
-    switch (field.type as FieldType) {
+    switch (field.type) {
       case 'STRING':
         return (
           <input
@@ -57,8 +57,14 @@ export function SchemaForm({ schema, value, onChange }: SchemaFormProps) {
             id={field.name}
             value={currentValue as number | ''}
             onChange={(e) => {
-              const parsed = e.target.value === '' ? '' : Number(e.target.value);
-              handleChange(field, parsed);
+              const parsed = Number(e.target.value);
+              if (Number.isNaN(parsed)) {
+                const next = { ...value };
+                delete next[field.name];
+                onChange(next);
+              } else {
+                onChange({ ...value, [field.name]: parsed });
+              }
             }}
             placeholder={field.placeholder}
             className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"

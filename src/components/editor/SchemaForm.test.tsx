@@ -202,7 +202,7 @@ describe('SchemaForm — empty schema', () => {
       <SchemaForm schema={schema} value={{}} onChange={() => {}} />,
     );
 
-    // Should render an empty div container
-    expect(container.firstElementChild?.children.length ?? 0).toBe(0);
+    // Should render nothing for empty schema
+    expect(container.firstChild).toBeNull();
   });
 });
