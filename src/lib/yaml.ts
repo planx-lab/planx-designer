@@ -32,6 +32,7 @@ function serializeSpec(spec: PipelineSpec): string {
     lines.push(`    - id: ${node.id}`);
     lines.push(`      kind: ${node.kind}`);
     lines.push(`      plugin_id: ${node.plugin_id}`);
+    lines.push(`      component_id: ${node.component_id}`);
     if (node.config && Object.keys(node.config).length > 0) {
       lines.push(`      config:`);
       lines.push(...indent(serializeConfig(node.config), 8));

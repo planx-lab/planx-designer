@@ -26,7 +26,8 @@ export function groupComponentsByKind(
   };
   for (const p of plugins) {
     for (const c of p.components) {
-      const kind = c.kind as ComponentKind;
+      const kind = c.kind;
+      if (!(kind in groups)) continue;
       groups[kind].push({
         pluginId: p.id,
         pluginDisplayName: p.displayName || p.id,

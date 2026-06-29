@@ -154,6 +154,14 @@ describe('validateSpec (DAG)', () => {
     expect(validateSpec(s).errors.join(' ')).toMatch(/duplicate/i);
   });
 
+  it('rejects missing component_id', () => {
+    const s = valid();
+    s.spec.nodes[0].component_id = '';
+    const r = validateSpec(s);
+    expect(r.valid).toBe(false);
+    expect(r.errors.some((e) => e.includes('component_id'))).toBe(true);
+  });
+
   it('returns ALL errors, not just the first', () => {
     const s = valid();
     s.metadata.name = '';

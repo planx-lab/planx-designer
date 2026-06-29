@@ -16,6 +16,7 @@ export function ConfigPanel() {
   const setComponent = usePipelineStore((s) => s.setComponent);
   const setConfig = usePipelineStore((s) => s.setConfig);
   const getItemsByKind = usePaletteStore((s) => s.getItemsByKind);
+  const plugins = usePaletteStore((s) => s.plugins);
 
   const node = nodes.find((n) => n.id === selectedNodeId);
 
@@ -31,7 +32,7 @@ export function ConfigPanel() {
 
   const components = useMemo(
     () => getItemsByKind()[node.data.nodeType] ?? [],
-    [getItemsByKind, node.data.nodeType],
+    [getItemsByKind, plugins, node.data.nodeType],
   );
 
   return (

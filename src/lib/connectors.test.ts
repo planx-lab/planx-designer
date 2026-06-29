@@ -8,7 +8,6 @@ function makePlugin(
 ): PluginInfo {
   return {
     version: '1.0.0',
-    displayName: overrides.id,
     components: kinds.map((k) => ({
       id: k,
       kind: k,

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import type { PluginInfo } from '@/types/plugin';
-import type { PaletteItem } from '@/lib/connectors';
 import { getPlugins } from '@/api/controlPlane';
 import { groupComponentsByKind } from '@/lib/connectors';
 
@@ -14,10 +13,6 @@ interface PaletteActions {
   fetchPlugins: () => Promise<void>;
   getItemsByKind: () => ReturnType<typeof groupComponentsByKind>;
   getPlugin: (id: string) => PluginInfo | undefined;
-  getComponent: (
-    pluginId: string,
-    componentId: string,
-  ) => PaletteItem | undefined;
 }
 
 export const usePaletteStore = create<PaletteState & PaletteActions>(
@@ -41,23 +36,5 @@ export const usePaletteStore = create<PaletteState & PaletteActions>(
     getItemsByKind: () => groupComponentsByKind(get().plugins),
 
     getPlugin: (id) => get().plugins.find((p) => p.id === id),
-
-    getComponent: (pluginId, componentId) => {
-      for (const p of get().plugins) {
-        for (const c of p.components) {
-          if (p.id === pluginId && c.id === componentId) {
-            return {
-              pluginId: p.id,
-              pluginDisplayName: p.displayName || p.id,
-              componentId: c.id,
-              componentDisplayName: c.displayName || c.id,
-              kind: c.kind,
-              description: c.description || p.description,
-            };
-          }
-        }
-      }
-      return undefined;
-    },
   }),
 );
