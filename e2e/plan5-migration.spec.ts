@@ -4,7 +4,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 const MOCK_PLUGINS = {
   plugins: [
-    { id: 'source-hello', version: '1.0.0', displayName: 'Hello Source', description: 'A friendly source plugin', components: [{ id: 'source', kind: 'source', displayName: 'Hello Source' }] },
+    { id: 'source-hello', version: '1.0.0', displayName: 'Hello Source', description: 'A friendly source plugin', components: [{ id: 'source', kind: 'source', displayName: 'Hello Source', configSchema: { fields: [{ name: 'message', type: 'STRING', label: 'Message', defaultValue: { stringValue: 'Hello' } }, { name: 'count', type: 'INTEGER', label: 'Count', defaultValue: { intValue: 3 } }, { name: 'tls', type: 'BOOLEAN', label: 'TLS' }] } }] },
     { id: 'processor-passthrough', version: '1.0.0', displayName: 'Passthrough', description: 'Passes data through', components: [{ id: 'processor', kind: 'processor', displayName: 'Passthrough' }] },
     { id: 'sink-stdout', version: '1.0.0', displayName: 'Stdout Sink', description: 'Writes data to stdout', components: [{ id: 'sink', kind: 'sink', displayName: 'Stdout Sink' }] },
   ],
@@ -245,6 +245,9 @@ test.describe('Plan 5 Protocol Migration', () => {
       await gotoAndWait(page);
       await addNode(page, 'Sources', 'Hello Source');
       await selectNodeViaStore(page, 0);
+      // Source-hello now has configSchema → SchemaForm by default.
+      // Toggle to Raw JSON to access CodeMirror.
+      await page.click('button:has-text("Raw JSON")');
       const cm = page.locator('.cm-editor');
       await expect(cm).toBeVisible({ timeout: 5000 });
       await cm.click();
@@ -418,6 +421,74 @@ test.describe('Plan 5 Protocol Migration', () => {
       await page.locator('button[title="Show config"]').click();
       await expect(page.locator('button[title="Hide palette"]')).toBeVisible();
       await expect(page.locator('button[title="Hide config"]')).toBeVisible();
+    });
+  });
+
+  test.describe('7. Schema Config (Plan 5b)', () => {
+    test('7.1 SchemaForm renders correct controls for source-hello', async ({ page }) => {
+      await mockPlugins(page);
+      await gotoAndWait(page);
+      await addNode(page, 'Sources', 'Hello Source');
+      await selectNodeViaStore(page, 0);
+
+      // SchemaForm should show typed controls instead of CodeMirror
+      await expect(page.locator('label:has-text("Message")')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('input[id="message"]')).toHaveAttribute('type', 'text');
+
+      await expect(page.locator('input[id="count"]')).toHaveAttribute('type', 'number');
+
+      await expect(page.locator('input[id="tls"]')).toHaveAttribute('type', 'checkbox');
+
+      // CodeMirror should NOT be visible while SchemaForm is shown
+      await expect(page.locator('.cm-editor')).not.toBeVisible();
+    });
+
+    test('7.2 Raw JSON toggle switches between SchemaForm and CodeMirror', async ({ page }) => {
+      await mockPlugins(page);
+      await gotoAndWait(page);
+      await addNode(page, 'Sources', 'Hello Source');
+      await selectNodeViaStore(page, 0);
+
+      // SchemaForm visible initially
+      await expect(page.locator('label:has-text("Message")')).toBeVisible({ timeout: 5000 });
+
+      // Click "Raw JSON" toggle
+      await page.click('button:has-text("Raw JSON")');
+
+      // CodeMirror appears
+      await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5000 });
+
+      // SchemaForm hidden
+      await expect(page.locator('label:has-text("Message")')).not.toBeVisible();
+
+      // Toggle back to SchemaForm
+      await page.click('button:has-text("Schema Form")');
+
+      // SchemaForm returns
+      await expect(page.locator('label:has-text("Message")')).toBeVisible({ timeout: 5000 });
+    });
+
+    test('7.3 Validate Config button shows result with mocked engine response', async ({ page }) => {
+      await mockPlugins(page);
+      // Mock the validate endpoint
+      await page.route('**/api/plugins/validate', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ok: true, message: 'all good' }),
+        });
+      });
+      await gotoAndWait(page);
+      await addNode(page, 'Sources', 'Hello Source');
+      await selectNodeViaStore(page, 0);
+
+      // Click Validate Config
+      await page.click('button:has-text("Validate Config")');
+
+      // Should show "Validating..." then success
+      await expect(page.locator('text=Validating...')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('text=all good').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('div.text-green-500').first()).toBeVisible({ timeout: 5000 });
     });
   });
 });
