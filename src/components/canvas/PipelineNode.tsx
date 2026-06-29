@@ -80,7 +80,7 @@ export const PipelineNode = memo(function PipelineNode({
 
       {/* Plugin name */}
       <p className="text-foreground/90 text-sm font-medium truncate">
-        {data.pluginLabel || data.plugin || 'Unconfigured'}
+        {data.pluginLabel || data.pluginId || 'Unconfigured'}
       </p>
 
       {/* Node name */}

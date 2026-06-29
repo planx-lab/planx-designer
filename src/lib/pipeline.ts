@@ -1,7 +1,7 @@
 import type { PipelineSpec, NodeSpec, EdgeSpec } from '@/types/pipeline';
 import type { PipelineNode } from '@/types/node';
 import type { Edge } from '@xyflow/react';
-import type { PluginType } from '@/types/plugin';
+import type { ComponentKind } from '@/types/plugin';
 import { validateSpec } from './validation';
 
 /** Build a DAG PipelineSpec from React Flow nodes + edges. */
@@ -16,7 +16,7 @@ export function buildSpec(
   const nameById = new Map<string, string>(nodes.map((n) => [n.id, n.data.name]));
 
   const nodeSpecs: NodeSpec[] = nodes.map((n) => {
-    const spec: NodeSpec = { id: n.data.name, kind: n.data.nodeType as PluginType, plugin: n.data.plugin };
+    const spec: NodeSpec = { id: n.data.name, kind: n.data.nodeType, plugin_id: n.data.pluginId, component_id: n.data.componentId };
     if (n.data.config && Object.keys(n.data.config).length > 0) spec.config = n.data.config;
     return spec;
   });
@@ -40,10 +40,11 @@ export function fromSpec(spec: PipelineSpec): { nodes: PipelineNode[]; edges: Ed
     position: { x: 0, y: 0 },
     data: {
       name: ns.id,
-      plugin: ns.plugin,
-      pluginLabel: ns.plugin,
+      pluginId: ns.plugin_id,
+      componentId: ns.component_id,
+      pluginLabel: ns.plugin_id,
       config: ns.config ?? {},
-      nodeType: ns.kind as PluginType,
+      nodeType: ns.kind as ComponentKind,
       isValid: true,
     },
   }));
@@ -64,7 +65,7 @@ export function isObjectEmpty(obj: Record<string, unknown>): boolean {
 }
 
 export function generateNodeName(
-  nodeType: PluginType,
+  nodeType: ComponentKind,
   existingNames: string[],
 ): string {
   const prefix =

@@ -21,7 +21,7 @@ export function validateSpec(spec: PipelineSpec): ValidationResult {
     if (seen.has(n.id)) errors.push(`Duplicate node id "${n.id}".`);
     seen.add(n.id);
     if (!NODE_ID_RE.test(n.id)) errors.push(`Invalid node id "${n.id}".`);
-    if (!n.plugin?.trim()) errors.push(`Node "${n.id}": plugin is required.`);
+    if (!n.plugin_id?.trim()) errors.push(`Node "${n.id}": plugin_id is required.`);
     if (!KINDS.includes(n.kind)) errors.push(`Node "${n.id}": unknown kind "${n.kind}".`);
     if (n.kind === 'source') sources++;
     if (n.kind === 'sink') sinks++;
