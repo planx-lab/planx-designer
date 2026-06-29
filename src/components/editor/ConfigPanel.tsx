@@ -20,6 +20,12 @@ export function ConfigPanel() {
 
   const node = nodes.find((n) => n.id === selectedNodeId);
 
+  // Always call useMemo before any early return to preserve hook ordering.
+  const components = useMemo(
+    () => (node ? getItemsByKind()[node.data.nodeType] ?? [] : []),
+    [getItemsByKind, plugins, node?.data?.nodeType],
+  );
+
   if (!node) {
     return (
       <div className="flex h-full items-center justify-center p-6">
@@ -29,11 +35,6 @@ export function ConfigPanel() {
       </div>
     );
   }
-
-  const components = useMemo(
-    () => getItemsByKind()[node.data.nodeType] ?? [],
-    [getItemsByKind, plugins, node.data.nodeType],
-  );
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
