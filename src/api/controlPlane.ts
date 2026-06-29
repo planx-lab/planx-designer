@@ -3,6 +3,19 @@ import type { CreatePipelineResponse } from '@/types/api';
 import type { PipelineSpec } from '@/types/pipeline';
 import { api } from './client';
 
+/** Validate a plugin component's configuration against its schema. */
+export async function validateConfig(
+  pluginId: string,
+  componentId: string,
+  config: Record<string, unknown>,
+): Promise<{ ok: boolean; message: string }> {
+  return api.post<{ ok: boolean; message: string }>('/plugins/validate', {
+    pluginId,
+    componentId,
+    config,
+  });
+}
+
 /** Raw response shape from GET /plugins. */
 interface PluginsResponse {
   plugins: PluginInfo[];

@@ -19,4 +19,12 @@ async function request<T>(
   return res.json();
 }
 
-export const api = { get: request };
+export const api = {
+  get: request,
+  post<T>(path: string, body: unknown): Promise<T> {
+    return request<T>(path, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+};

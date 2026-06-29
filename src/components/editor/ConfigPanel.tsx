@@ -4,10 +4,12 @@ import { basicSetup } from 'codemirror';
 import { json, jsonParseLinter } from '@codemirror/lang-json';
 import { lintGutter, linter } from '@codemirror/lint';
 import { oneDark } from '@codemirror/theme-one-dark';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { usePaletteStore } from '@/stores/usePaletteStore';
+import { validateConfig } from '@/api/controlPlane';
 import { SchemaForm } from './SchemaForm';
 
 export function ConfigPanel() {
@@ -22,6 +24,9 @@ export function ConfigPanel() {
   const node = nodes.find((n) => n.id === selectedNodeId);
 
   const [showRawJson, setShowRawJson] = useState(false);
+  const [validateState, setValidateState] = useState<
+    { status: 'idle' } | { status: 'loading' } | { status: 'success'; message: string } | { status: 'error'; message: string }
+  >({ status: 'idle' });
 
   // Always call useMemo before any early return to preserve hook ordering.
   const components = useMemo(
@@ -150,6 +155,50 @@ export function ConfigPanel() {
               value={node.data.config}
               onChange={(config) => setConfig(node.id, config)}
             />
+          </div>
+        )}
+
+        {/* Validate Config */}
+        <button
+          type="button"
+          disabled={validateState.status === 'loading'}
+          onClick={async () => {
+            setValidateState({ status: 'loading' });
+            try {
+              const result = await validateConfig(
+                node.data.pluginId ?? '',
+                node.data.componentId ?? '',
+                node.data.config,
+              );
+              setValidateState(
+                result.ok
+                  ? { status: 'success', message: result.message }
+                  : { status: 'error', message: result.message },
+              );
+            } catch {
+              setValidateState({
+                status: 'error',
+                message: 'Validation request failed',
+              });
+            }
+          }}
+          className="bg-accent hover:bg-accent/80 text-white rounded-lg text-sm px-4 py-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <CheckCircle className="inline-block w-4 h-4 mr-1.5 -mt-0.5" />
+          {validateState.status === 'loading' ? 'Validating...' : 'Validate Config'}
+        </button>
+
+        {/* Validation result */}
+        {validateState.status === 'success' && (
+          <div className="mt-2 flex items-center gap-1.5 text-sm text-green-500">
+            <CheckCircle className="w-4 h-4" />
+            <span>{validateState.message}</span>
+          </div>
+        )}
+        {validateState.status === 'error' && (
+          <div className="mt-2 flex items-center gap-1.5 text-sm text-red-500">
+            <XCircle className="w-4 h-4" />
+            <span>{validateState.message}</span>
           </div>
         )}
       </div>
