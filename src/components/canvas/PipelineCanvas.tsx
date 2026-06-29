@@ -14,7 +14,7 @@ import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { PipelineNode } from './PipelineNode';
 import type { PipelineNode as PipelineNodeType } from '@/types/node';
-import type { PluginType } from '@/types/plugin';
+import type { ComponentKind } from '@/types/plugin';
 
 const nodeTypes = { pipelineNode: PipelineNode };
 
@@ -79,14 +79,15 @@ export function PipelineCanvas() {
       e.preventDefault();
       const raw = e.dataTransfer.getData('application/planx-plugin');
       if (!raw) return;
-      const { type, plugin, label } = JSON.parse(raw) as {
-        type: PluginType;
-        plugin: string;
+      const { kind, plugin_id, component_id, label } = JSON.parse(raw) as {
+        kind: ComponentKind;
+        plugin_id: string;
+        component_id: string;
         label: string;
       };
       // Convert screen coords to ReactFlow canvas coords
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      addNodeAt(type, plugin, label, position.x, position.y);
+      addNodeAt(kind, plugin_id, component_id, label, position.x, position.y);
     },
     [addNodeAt, screenToFlowPosition],
   );
