@@ -1,15 +1,17 @@
 import type { Node } from '@xyflow/react';
-import type { PluginType } from './plugin';
+import type { ComponentKind } from './plugin';
 
 /** Data stored inside each React Flow node. */
 export interface PipelineNodeData {
   [key: string]: unknown;
   /** Planx node type — determines position constraints in the linear chain. */
-  nodeType: PluginType;
+  nodeType: ComponentKind;     // was PluginType
   /** User-assigned name (unique within the pipeline). */
   name: string;
   /** Plugin identifier (e.g. "source-hello"). */
-  plugin: string;
+  pluginId: string;            // was plugin
+  /** Component within the plugin to invoke. */
+  componentId: string;         // NEW
   /** Human-readable label from the plugin descriptor. */
   pluginLabel: string;
   /** Opaque JSON config. */

@@ -15,8 +15,9 @@ function makeNode(
     position: { x: 0, y: 0 },
     data: {
       name: data.name ?? id,
-      plugin: data.plugin ?? 'p',
-      pluginLabel: data.pluginLabel ?? data.plugin ?? 'p',
+      pluginId: data.pluginId ?? 'p',
+      componentId: data.componentId ?? data.nodeType,
+      pluginLabel: data.pluginLabel ?? data.pluginId ?? 'p',
       config: data.config ?? {},
       isValid: true,
       ...data,
@@ -25,9 +26,9 @@ function makeNode(
 }
 
 const baseNodes = (): PipelineNode[] => [
-  makeNode({ nodeType: 'source', name: 'src', plugin: 'source-hello' }, 'src'),
-  makeNode({ nodeType: 'processor', name: 'proc', plugin: 'p', pluginLabel: 'P' }, 'proc'),
-  makeNode({ nodeType: 'sink', name: 'snk', plugin: 'sink-stdout' }, 'snk'),
+  makeNode({ nodeType: 'source', name: 'src', pluginId: 'source-hello', componentId: 'source' }, 'src'),
+  makeNode({ nodeType: 'processor', name: 'proc', pluginId: 'p', pluginLabel: 'P', componentId: 'processor' }, 'proc'),
+  makeNode({ nodeType: 'sink', name: 'snk', pluginId: 'sink-stdout', componentId: 'sink' }, 'snk'),
 ];
 
 const baseEdges = (): Edge[] => [
@@ -48,9 +49,9 @@ describe('buildSpec (DAG)', () => {
   it('produces nodes + edges with correct ids/kinds/plugins', () => {
     const spec = buildSpec(baseNodes(), baseEdges(), { name: 'p', tenantId: 't' });
     expect(spec.spec.nodes).toHaveLength(3);
-    expect(spec.spec.nodes[0]).toMatchObject({ id: 'src', kind: 'source', plugin: 'source-hello' });
-    expect(spec.spec.nodes[1]).toMatchObject({ id: 'proc', kind: 'processor', plugin: 'p' });
-    expect(spec.spec.nodes[2]).toMatchObject({ id: 'snk', kind: 'sink', plugin: 'sink-stdout' });
+    expect(spec.spec.nodes[0]).toMatchObject({ id: 'src', kind: 'source', plugin_id: 'source-hello', component_id: 'source' });
+    expect(spec.spec.nodes[1]).toMatchObject({ id: 'proc', kind: 'processor', plugin_id: 'p', component_id: 'processor' });
+    expect(spec.spec.nodes[2]).toMatchObject({ id: 'snk', kind: 'sink', plugin_id: 'sink-stdout', component_id: 'sink' });
     expect(spec.spec.edges).toHaveLength(2);
     expect(spec.spec.edges[0]).toEqual({ from: 'src', to: 'proc' });
     expect(spec.spec.edges[1]).toEqual({ from: 'proc', to: 'snk' });
@@ -58,8 +59,8 @@ describe('buildSpec (DAG)', () => {
 
   it('omits empty config objects', () => {
     const nodes = [
-      makeNode({ nodeType: 'source', plugin: 's', config: {} }, 'src'),
-      makeNode({ nodeType: 'sink', plugin: 'k', config: { a: 1 } }, 'snk'),
+      makeNode({ nodeType: 'source', pluginId: 's', componentId: 'source', config: {} }, 'src'),
+      makeNode({ nodeType: 'sink', pluginId: 'k', componentId: 'sink', config: { a: 1 } }, 'snk'),
     ];
     const edges: Edge[] = [{ id: 'e1', source: 'src', target: 'snk' }];
     const spec = buildSpec(nodes, edges, { name: 'd', tenantId: 't' });
@@ -73,9 +74,9 @@ describe('buildSpec (DAG)', () => {
     // name, else validateSpec's NODE_ID_RE (^[a-zA-Z]) rejects digit-leading UUIDs
     // and Submit is blocked.
     const nodes: PipelineNode[] = [
-      makeNode({ nodeType: 'source', name: 'src-1', plugin: 'source-hello' }, '8ed69e45-aaaa'),
-      makeNode({ nodeType: 'processor', name: 'proc-1', plugin: 'p' }, 'f54ddb0c-bbbb'),
-      makeNode({ nodeType: 'sink', name: 'snk-1', plugin: 'sink-stdout' }, '02912054-cccc'),
+      makeNode({ nodeType: 'source', name: 'src-1', pluginId: 'source-hello', componentId: 'source' }, '8ed69e45-aaaa'),
+      makeNode({ nodeType: 'processor', name: 'proc-1', pluginId: 'p', componentId: 'processor' }, 'f54ddb0c-bbbb'),
+      makeNode({ nodeType: 'sink', name: 'snk-1', pluginId: 'sink-stdout', componentId: 'sink' }, '02912054-cccc'),
     ];
     const edges: Edge[] = [
       { id: 'e1', source: '8ed69e45-aaaa', target: 'f54ddb0c-bbbb' },
@@ -100,7 +101,7 @@ describe('fromSpec (DAG)', () => {
     expect(back.nodes).toHaveLength(3);
     expect(back.nodes[0].id).toBe('src');
     expect(back.nodes[0].data.nodeType).toBe('source');
-    expect(back.nodes[0].data.plugin).toBe('source-hello');
+    expect(back.nodes[0].data.pluginId).toBe('source-hello');
     expect(back.nodes[2].id).toBe('snk');
     expect(back.nodes[2].data.nodeType).toBe('sink');
     expect(back.edges).toHaveLength(2);
@@ -149,7 +150,7 @@ describe('validateSpec (DAG)', () => {
 
   it('rejects duplicate node id', () => {
     const s = valid();
-    s.spec.nodes.push({ id: 'src', kind: 'processor', plugin: 'p' });
+    s.spec.nodes.push({ id: 'src', kind: 'processor', plugin_id: 'p', component_id: 'processor' });
     expect(validateSpec(s).errors.join(' ')).toMatch(/duplicate/i);
   });
 

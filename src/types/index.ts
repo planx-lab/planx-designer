@@ -4,7 +4,7 @@ export type {
   ValidationResult,
 } from './pipeline';
 
-export type { PluginType, PluginDescriptor } from './plugin';
+export type { ComponentKind, PluginInfo, ComponentInfo } from './plugin';
 
 export type { PipelineNodeData, PipelineNode } from './node';
 

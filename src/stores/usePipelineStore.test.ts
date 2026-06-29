@@ -11,7 +11,8 @@ function makeNode(id: string, type: 'source' | 'processor' | 'sink'): PipelineNo
     data: {
       nodeType: type,
       name: id,
-      plugin: 'test-plugin',
+      pluginId: 'test-plugin',
+      componentId: type,
       pluginLabel: 'Test',
       config: {},
       isValid: true,
@@ -71,7 +72,7 @@ describe('usePipelineStore — DAG node drag (dag-designer.md §5.5)', () => {
 
     expect(node.position).toEqual({ x: 250, y: 150 });
     expect(node.data.nodeType).toBe('source');
-    expect(node.data.plugin).toBe('source-hello');
+    expect(node.data.pluginId).toBe('source-hello');
 
     const stored = usePipelineStore.getState().nodes.find((n) => n.id === node.id);
     expect(stored?.position).toEqual({ x: 250, y: 150 });

@@ -1,24 +1,21 @@
-/** Plugin types — must match planx-engine/internal/plugin/model/plugin.go. */
-export type PluginType = 'source' | 'processor' | 'sink';
+/** Plugin types — matches the new Plugin Discovery Protocol (ADR-008/009).
+ *  GET /plugins returns PluginInfo[] (Plan 3 engine). */
 
-/** Plugin descriptor returned by GET /plugins. */
-export interface PluginDescriptor {
-  name: string;
-  type: PluginType;
-  /** External-system identity this plugin belongs to (e.g. "mysql"). See planx-architecture.md §3. */
-  connector: string;
-  version: string;
-  protocol: string;
+export type ComponentKind = 'source' | 'processor' | 'sink';
+
+/** One component of a plugin (runtime unit). */
+export interface ComponentInfo {
+  id: string;           // e.g. "source" (Plan 3 single-component convention)
+  kind: ComponentKind;
+  displayName: string;
   description?: string;
-  runtime?: string;
-  capabilities?: Record<string, unknown>;
-  sdk?: {
-    name: string;
-    version: string;
-  };
-  resources?: {
-    max_sessions: number;
-  };
-  /** Human-readable display name. Falls back to name if absent. */
-  displayName?: string;
+}
+
+/** A self-describing plugin (package). */
+export interface PluginInfo {
+  id: string;           // e.g. "source-hello"
+  version: string;
+  displayName: string;
+  description?: string;
+  components: ComponentInfo[];
 }

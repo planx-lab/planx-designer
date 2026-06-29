@@ -5,7 +5,10 @@ export type NodeKind = 'source' | 'processor' | 'sink';
 export interface NodeSpec {
   id: string;
   kind: NodeKind;
-  plugin: string;
+  /** Plugin that owns the component (replaces the old `plugin` string). Plan 6 / ADR-009. */
+  plugin_id: string;
+  /** Component within the plugin to invoke (ADR-009). */
+  component_id: string;
   config?: Record<string, unknown>;
 }
 
