@@ -1,4 +1,4 @@
-import type { PluginInfo } from '@/types/plugin';
+import type { PluginInfo, FieldType } from '@/types/plugin';
 import type { CreatePipelineResponse } from '@/types/api';
 import type { PipelineSpec } from '@/types/pipeline';
 import { api } from './client';
@@ -21,10 +21,41 @@ interface PluginsResponse {
   plugins: PluginInfo[];
 }
 
+/** Map the engine's proto FieldType enum (number) to the designer's FieldType string.
+ *  Proto: 1=STRING, 2=INTEGER, 4=BOOLEAN, 5=SECRET, 6=ENUM (3/7/8 unused in Alpha).
+ *  The engine serializes ConfigField.type as the proto enum number, but SchemaForm's
+ *  switch expects string names — without this, no case matches and inputs don't render. */
+function normalizeFieldType(raw: unknown): FieldType {
+  if (typeof raw === 'string') return raw as FieldType;
+  const protoMap: Record<number, FieldType> = {
+    1: 'STRING', 2: 'INTEGER', 4: 'BOOLEAN', 5: 'SECRET', 6: 'ENUM',
+  };
+  return protoMap[raw as number] ?? 'STRING';
+}
+
+/** Normalize the engine's proto-style configSchema to the designer's TypeScript format. */
+function normalizePlugin(plugin: PluginInfo): PluginInfo {
+  if (!plugin.components) return plugin;
+  return {
+    ...plugin,
+    components: plugin.components.map((c) => ({
+      ...c,
+      configSchema: c.configSchema
+        ? {
+            fields: c.configSchema.fields.map((f) => ({
+              ...f,
+              type: normalizeFieldType(f.type),
+            })),
+          }
+        : undefined,
+    })),
+  };
+}
+
 /** Fetch all registered plugins from the Control Plane. */
 export async function getPlugins(): Promise<PluginInfo[]> {
   const { plugins } = await api.get<PluginsResponse>('/plugins');
-  return plugins;
+  return plugins.map(normalizePlugin);
 }
 
 /** Engine returns UPPERCASE pipeline-level status (model.ExecutionStatus:
