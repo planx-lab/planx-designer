@@ -118,7 +118,7 @@ export function SchemaForm({
           id={field.name}
           value={currentValue}
           onChange={(e) => handleChange(field, e.target.value)}
-          placeholder={field.placeholder ?? 'col1,col2 (empty = all)'}
+          placeholder={field.placeholder ?? 'col1,col2 (at least one required)'}
           className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
         />
       );
@@ -128,6 +128,9 @@ export function SchemaForm({
     const toggle = (name: string) => {
       const next = new Set(checked);
       if (next.has(name)) {
+        // Prevent unchecking the LAST remaining column: empty columns means
+        // "SELECT *" in the plugin, which is dangerous (silent schema drift).
+        if (next.size <= 1) return;
         next.delete(name);
       } else {
         next.add(name);
@@ -138,19 +141,29 @@ export function SchemaForm({
         .filter((n) => next.has(n));
       handleChange(field, ordered.join(','));
     };
+    // A column is locked (cannot be unchecked) when it is the only checked one.
+    const isLocked = (name: string): boolean =>
+      checked.has(name) && checked.size <= 1;
 
     return (
       <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 max-h-40 overflow-y-auto rounded-md border border-border p-1.5">
         {columns.map((col) => {
           const colId = `col-${col.name}`;
+          const locked = isLocked(col.name);
           return (
-            <label key={col.name} htmlFor={colId} className="flex items-center gap-1 text-[11px] text-foreground cursor-pointer">
+            <label
+              key={col.name}
+              htmlFor={colId}
+              className={`flex items-center gap-1 text-[11px] text-foreground ${locked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            >
               <input
                 id={colId}
                 type="checkbox"
                 checked={checked.has(col.name)}
                 onChange={() => toggle(col.name)}
                 className="accent-accent h-3 w-3"
+                title={locked ? 'At least one column required' : undefined}
+                disabled={locked}
               />
               <span className="truncate">{col.name}</span>
               <span className="text-foreground/30 text-[10px]">{col.type}</span>

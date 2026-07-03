@@ -312,4 +312,63 @@ describe('SchemaForm — column checkboxes discovery', () => {
     expect(input.tagName).toBe('INPUT');
     expect(input.type).toBe('text');
   });
+
+  it('prevents unchecking the last remaining column (locked + disabled + tooltip)', () => {
+    const onChange = vi.fn();
+    const schema = makeSchema([{ name: 'columns', type: 'STRING', label: 'Columns' }]);
+    const columns = [
+      { name: 'id', type: 'integer', nullable: false },
+      { name: 'email', type: 'text', nullable: true },
+    ];
+    // Only "id" is checked — it is the last remaining, so it must be locked.
+    const { rerender } = render(
+      <SchemaForm
+        schema={schema}
+        value={{ columns: 'id' }}
+        onChange={onChange}
+        columns={columns}
+      />,
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    // id is checked and is the only checked column -> locked.
+    expect(checkboxes[0].checked).toBe(true);
+    expect(checkboxes[0].disabled).toBe(true);
+    expect(checkboxes[0].title).toBe('At least one column required');
+    // email is unchecked and not locked.
+    expect(checkboxes[1].checked).toBe(false);
+    expect(checkboxes[1].disabled).toBe(false);
+
+    // Clicking the locked checkbox does NOT fire onChange (guard returns early).
+    fireEvent.click(checkboxes[0]);
+    expect(onChange).not.toHaveBeenCalled();
+    // id remains checked.
+    expect(checkboxes[0].checked).toBe(true);
+  });
+
+  it('allows unchecking a column when more than one remains checked', () => {
+    const onChange = vi.fn();
+    const schema = makeSchema([{ name: 'columns', type: 'STRING', label: 'Columns' }]);
+    const columns = [
+      { name: 'id', type: 'integer', nullable: false },
+      { name: 'name', type: 'text', nullable: true },
+      { name: 'email', type: 'text', nullable: true },
+    ];
+    render(
+      <SchemaForm
+        schema={schema}
+        value={{ columns: 'id,name,email' }}
+        onChange={onChange}
+        columns={columns}
+      />,
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    // None locked: three checked, all enabled.
+    expect(checkboxes.every((c) => !c.disabled)).toBe(true);
+
+    // Uncheck the middle one -> onChange fires with the remaining two.
+    fireEvent.click(checkboxes[1]);
+    expect(onChange).toHaveBeenCalledWith({ columns: 'id,email' });
+  });
 });
