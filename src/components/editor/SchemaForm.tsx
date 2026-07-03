@@ -1,9 +1,19 @@
-import type { ConfigSchema, ConfigField } from '@/types/plugin';
+import type { ConfigSchema, ConfigField, TableInfo, ColumnInfo } from '@/types/plugin';
 
 interface SchemaFormProps {
   schema: ConfigSchema;
   value: Record<string, unknown>;
   onChange: (value: Record<string, unknown>) => void;
+  /** Discovered tables — when populated, a field named "table" renders a dropdown. */
+  tables?: TableInfo[];
+  /** Discovered columns — when populated, a field named "columns" renders a checkbox group. */
+  columns?: ColumnInfo[];
+  /** Triggered by the "Discover Tables" button under the table field. */
+  onDiscoverTables?: () => void;
+  /** Triggered when the table selection changes (auto-discovers columns). */
+  onTableChange?: (table: string) => void;
+  /** Discovery in flight — disables the Discover Tables button. */
+  loadingDiscovery?: boolean;
 }
 
 function getDefaultValue(field: ConfigField): unknown {
@@ -25,7 +35,16 @@ function getCurrentValue(value: Record<string, unknown>, field: ConfigField): un
   return getDefaultValue(field) ?? '';
 }
 
-export function SchemaForm({ schema, value, onChange }: SchemaFormProps) {
+export function SchemaForm({
+  schema,
+  value,
+  onChange,
+  tables,
+  columns,
+  onDiscoverTables,
+  onTableChange,
+  loadingDiscovery,
+}: SchemaFormProps) {
   if (schema.fields.length === 0) {
     return null;
   }
@@ -34,7 +53,121 @@ export function SchemaForm({ schema, value, onChange }: SchemaFormProps) {
     onChange({ ...value, [field.name]: newValue });
   };
 
+  // Parse a comma-separated columns value into a Set of checked names.
+  // Empty/absent value means "all checked" (the default), matching the
+  // spec convention: all columns selected unless the user opts out.
+  const checkedColumns = (field: ConfigField): Set<string> => {
+    const raw = getCurrentValue(value, field);
+    if (typeof raw === 'string' && raw.length > 0) {
+      return new Set(raw.split(',').map((s) => s.trim()).filter(Boolean));
+    }
+    return new Set((columns ?? []).map((c) => c.name));
+  };
+
+  const renderTableField = (field: ConfigField) => {
+    const currentValue = getCurrentValue(value, field) as string;
+    if (!tables || tables.length === 0) {
+      return (
+        <input
+          type="text"
+          id={field.name}
+          value={currentValue}
+          onChange={(e) => handleChange(field, e.target.value)}
+          placeholder={field.placeholder ?? 'schema.table'}
+          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      );
+    }
+    return (
+      <div className="space-y-2">
+        <select
+          id={field.name}
+          value={currentValue}
+          onChange={(e) => {
+            handleChange(field, e.target.value);
+            onTableChange?.(e.target.value);
+          }}
+          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+        >
+          {tables.map((t) => (
+            <option key={`${t.schema}.${t.name}`} value={`${t.schema}.${t.name}`}>
+              {t.schema}.{t.name}
+            </option>
+          ))}
+        </select>
+        {onDiscoverTables && (
+          <button
+            type="button"
+            onClick={onDiscoverTables}
+            disabled={loadingDiscovery}
+            className="bg-accent hover:bg-accent/80 text-white rounded-lg text-xs px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingDiscovery ? 'Discovering...' : 'Discover Tables'}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const renderColumnsField = (field: ConfigField) => {
+    if (!columns || columns.length === 0) {
+      const currentValue = getCurrentValue(value, field) as string;
+      return (
+        <input
+          type="text"
+          id={field.name}
+          value={currentValue}
+          onChange={(e) => handleChange(field, e.target.value)}
+          placeholder={field.placeholder ?? 'col1,col2 (empty = all)'}
+          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      );
+    }
+
+    const checked = checkedColumns(field);
+    const toggle = (name: string) => {
+      const next = new Set(checked);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      // Preserve column discovery order for a stable comma-separated value.
+      const ordered = columns
+        .map((c) => c.name)
+        .filter((n) => next.has(n));
+      handleChange(field, ordered.join(','));
+    };
+
+    return (
+      <div className="space-y-1 max-h-48 overflow-y-auto rounded-lg border border-border p-2">
+        {columns.map((col) => {
+          const colId = `col-${col.name}`;
+          return (
+            <label key={col.name} htmlFor={colId} className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                id={colId}
+                type="checkbox"
+                checked={checked.has(col.name)}
+                onChange={() => toggle(col.name)}
+                className="accent-accent"
+              />
+              <span>
+                {col.name} <span className="text-foreground/40">({col.type})</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderControl = (field: ConfigField) => {
+    // Convention-based discovery rendering: a field named "table" becomes a
+    // dropdown when tables are available; "columns" becomes a checkbox group.
+    if (field.name === 'table') return renderTableField(field);
+    if (field.name === 'columns') return renderColumnsField(field);
+
     const currentValue = getCurrentValue(value, field);
 
     switch (field.type) {

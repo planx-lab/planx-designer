@@ -43,3 +43,16 @@ export interface PluginInfo {
   description?: string;
   components: ComponentInfo[];
 }
+
+/** A discovered table (schema-discovery: ADR-013). */
+export interface TableInfo {
+  schema: string;
+  name: string;
+}
+
+/** A discovered column (schema-discovery: ADR-013). */
+export interface ColumnInfo {
+  name: string;
+  type: string;
+  nullable: boolean;
+}

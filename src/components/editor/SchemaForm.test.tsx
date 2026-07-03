@@ -206,3 +206,110 @@ describe('SchemaForm — empty schema', () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+// ── Schema discovery: table dropdown + column checkboxes ─────────────
+
+describe('SchemaForm — table dropdown discovery', () => {
+  it('renders a <select> dropdown when tables prop is populated', () => {
+    const schema = makeSchema([{ name: 'table', type: 'STRING', label: 'Table' }]);
+    const tables = [
+      { schema: 'public', name: 'users' },
+      { schema: 'public', name: 'orders' },
+    ];
+    render(
+      <SchemaForm schema={schema} value={{}} onChange={() => {}} tables={tables} />,
+    );
+
+    // The table field becomes a <select> (role=listbox in testing-library)
+    // rather than a text input.
+    const select = screen.getByLabelText('Table') as HTMLSelectElement;
+    expect(select.tagName).toBe('SELECT');
+    expect(select.options).toHaveLength(2);
+    expect(select.options[0].value).toBe('public.users');
+    expect(select.options[1].value).toBe('public.orders');
+  });
+
+  it('renders a Discover Tables button', () => {
+    const schema = makeSchema([{ name: 'table', type: 'STRING', label: 'Table' }]);
+    const onDiscover = vi.fn();
+    render(
+      <SchemaForm
+        schema={schema}
+        value={{}}
+        onChange={() => {}}
+        tables={[{ schema: 'public', name: 'users' }]}
+        onDiscoverTables={onDiscover}
+      />,
+    );
+
+    const btn = screen.getByRole('button', { name: /discover tables/i });
+    fireEvent.click(btn);
+    expect(onDiscover).toHaveBeenCalledOnce();
+  });
+
+  it('falls back to text input for table field when no tables prop', () => {
+    const schema = makeSchema([{ name: 'table', type: 'STRING', label: 'Table' }]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const input = screen.getByLabelText('Table') as HTMLInputElement;
+    expect(input.tagName).toBe('INPUT');
+    expect(input.type).toBe('text');
+  });
+});
+
+describe('SchemaForm — column checkboxes discovery', () => {
+  it('renders checkboxes when columns prop is populated; all checked by default', () => {
+    const schema = makeSchema([{ name: 'columns', type: 'STRING', label: 'Columns' }]);
+    const columns = [
+      { name: 'id', type: 'integer', nullable: false },
+      { name: 'email', type: 'text', nullable: true },
+    ];
+    render(
+      <SchemaForm schema={schema} value={{}} onChange={() => {}} columns={columns} />,
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    expect(checkboxes).toHaveLength(2);
+    expect(checkboxes[0].checked).toBe(true);
+    expect(checkboxes[1].checked).toBe(true);
+    // Each checkbox label shows the column name and type.
+    const idLabel = checkboxes[0].closest('label');
+    const emailLabel = checkboxes[1].closest('label');
+    expect(idLabel?.textContent).toMatch(/id/);
+    expect(idLabel?.textContent).toMatch(/integer/);
+    expect(emailLabel?.textContent).toMatch(/email/);
+    expect(emailLabel?.textContent).toMatch(/text/);
+  });
+
+  it('toggling a checkbox updates the comma-separated columns value', () => {
+    const onChange = vi.fn();
+    const schema = makeSchema([{ name: 'columns', type: 'STRING', label: 'Columns' }]);
+    const columns = [
+      { name: 'id', type: 'integer', nullable: false },
+      { name: 'name', type: 'text', nullable: true },
+      { name: 'email', type: 'text', nullable: true },
+    ];
+    render(
+      <SchemaForm
+        schema={schema}
+        value={{}}
+        onChange={onChange}
+        columns={columns}
+      />,
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    // Uncheck the middle one (name)
+    fireEvent.click(checkboxes[1]);
+    expect(onChange).toHaveBeenCalledWith({ columns: 'id,email' });
+  });
+
+  it('falls back to text input for columns field when no columns prop', () => {
+    const schema = makeSchema([{ name: 'columns', type: 'STRING', label: 'Columns' }]);
+    render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
+
+    const input = screen.getByLabelText('Columns') as HTMLInputElement;
+    expect(input.tagName).toBe('INPUT');
+    expect(input.type).toBe('text');
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { normalizeStatus, validateConfig } from './controlPlane';
+import { discoverSchema, normalizeStatus, validateConfig } from './controlPlane';
 
 describe('validateConfig', () => {
   beforeEach(() => {
@@ -71,5 +71,75 @@ describe('normalizeStatus', () => {
       nodeStatuses: { 'src-1': { nodeId: 'src-1', status: 'running' } },
     });
     expect(r.nodeStatuses['src-1'].status).toBe('running');
+  });
+});
+
+describe('discoverSchema', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('calls POST /plugins/discover-schema and returns tables', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          tables: [
+            { schema: 'public', name: 'users' },
+            { schema: 'public', name: 'orders' },
+          ],
+          columns: [],
+        }),
+    });
+
+    const result = await discoverSchema('postgres', 'source', {
+      host: 'localhost',
+      port: 5432,
+    });
+
+    expect(result.tables).toEqual([
+      { schema: 'public', name: 'users' },
+      { schema: 'public', name: 'orders' },
+    ]);
+    expect(result.columns).toEqual([]);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/plugins/discover-schema'),
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('postgres'),
+      }),
+    );
+  });
+
+  it('returns columns when config includes a table', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          tables: [],
+          columns: [
+            { name: 'id', type: 'integer', nullable: false },
+            { name: 'email', type: 'text', nullable: true },
+          ],
+        }),
+    });
+
+    const result = await discoverSchema('postgres', 'source', {
+      host: 'localhost',
+      table: 'public.users',
+    });
+
+    expect(result.columns).toEqual([
+      { name: 'id', type: 'integer', nullable: false },
+      { name: 'email', type: 'text', nullable: true },
+    ]);
+    expect(result.tables).toEqual([]);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/plugins/discover-schema'),
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('public.users'),
+      }),
+    );
   });
 });

@@ -1,4 +1,4 @@
-import type { PluginInfo, FieldType } from '@/types/plugin';
+import type { PluginInfo, FieldType, TableInfo, ColumnInfo } from '@/types/plugin';
 import type { CreatePipelineResponse } from '@/types/api';
 import type { PipelineSpec } from '@/types/pipeline';
 import { api } from './client';
@@ -14,6 +14,19 @@ export async function validateConfig(
     componentId,
     config,
   });
+}
+
+/** Discover tables (no table in config) or columns (table in config) for a
+ *  plugin component via POST /plugins/discover-schema (ADR-013). */
+export async function discoverSchema(
+  pluginId: string,
+  componentId: string,
+  config: Record<string, unknown>,
+): Promise<{ tables: TableInfo[]; columns: ColumnInfo[] }> {
+  return api.post<{ tables: TableInfo[]; columns: ColumnInfo[] }>(
+    '/plugins/discover-schema',
+    { pluginId, componentId, config },
+  );
 }
 
 /** Raw response shape from GET /plugins. */

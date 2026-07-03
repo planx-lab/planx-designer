@@ -9,7 +9,8 @@ import { CheckCircle, XCircle } from 'lucide-react';
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { usePaletteStore } from '@/stores/usePaletteStore';
-import { validateConfig } from '@/api/controlPlane';
+import { validateConfig, discoverSchema } from '@/api/controlPlane';
+import type { TableInfo, ColumnInfo } from '@/types/plugin';
 import { SchemaForm } from './SchemaForm';
 
 export function ConfigPanel() {
@@ -27,6 +28,18 @@ export function ConfigPanel() {
   const [validateState, setValidateState] = useState<
     { status: 'idle' } | { status: 'loading' } | { status: 'success'; message: string } | { status: 'error'; message: string }
   >({ status: 'idle' });
+
+  // Schema discovery state (ADR-013): tables list, columns list, loading flag.
+  // Reset when the selected node's plugin/component changes so stale discovery
+  // data from one connector doesn't leak into another.
+  const [discovery, setDiscovery] = useState<{
+    tables: TableInfo[];
+    columns: ColumnInfo[];
+    loading: boolean;
+  }>({ tables: [], columns: [], loading: false });
+
+  const pluginId = node?.data?.pluginId;
+  const componentId = node?.data?.componentId;
 
   // Always call useMemo before any early return to preserve hook ordering.
   const components = useMemo(
@@ -50,6 +63,46 @@ export function ConfigPanel() {
   useEffect(() => {
     setValidateState({ status: 'idle' });
   }, [node?.data?.config]);
+
+  // Reset discovery state when the selected plugin/component changes.
+  useEffect(() => {
+    setDiscovery({ tables: [], columns: [], loading: false });
+  }, [pluginId, componentId]);
+
+  // Discover tables for the current connection config. Triggered by the
+  // "Discover Tables" button on the table field.
+  const handleDiscoverTables = async () => {
+    if (!node?.data?.pluginId || !node?.data?.componentId) return;
+    setDiscovery((prev) => ({ ...prev, loading: true }));
+    try {
+      const result = await discoverSchema(
+        node.data.pluginId,
+        node.data.componentId,
+        node.data.config,
+      );
+      setDiscovery({ tables: result.tables, columns: [], loading: false });
+    } catch {
+      setDiscovery((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  // When the user selects a table, persist it and auto-discover columns.
+  const handleTableChange = async (table: string) => {
+    if (!node) return;
+    setConfig(node.id, { ...node.data.config, table });
+    if (!node.data.pluginId || !node.data.componentId) return;
+    const connConfig = { ...node.data.config, table };
+    try {
+      const result = await discoverSchema(
+        node.data.pluginId,
+        node.data.componentId,
+        connConfig,
+      );
+      setDiscovery((prev) => ({ ...prev, columns: result.columns }));
+    } catch {
+      // Keep existing columns on error; the dropdown selection still persisted.
+    }
+  };
 
   if (!node) {
     return (
@@ -152,6 +205,11 @@ export function ConfigPanel() {
               schema={configSchema}
               value={node.data.config}
               onChange={(config) => setConfig(node.id, config)}
+              tables={discovery.tables}
+              columns={discovery.columns}
+              onDiscoverTables={handleDiscoverTables}
+              onTableChange={handleTableChange}
+              loadingDiscovery={discovery.loading}
             />
           </div>
         ) : (
