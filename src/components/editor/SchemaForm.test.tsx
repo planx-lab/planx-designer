@@ -229,7 +229,7 @@ describe('SchemaForm — table dropdown discovery', () => {
     expect(select.options[1].value).toBe('public.orders');
   });
 
-  it('renders a Discover Tables button', () => {
+  it('renders a Discover button', () => {
     const schema = makeSchema([{ name: 'table', type: 'STRING', label: 'Table' }]);
     const onDiscover = vi.fn();
     render(
@@ -242,7 +242,7 @@ describe('SchemaForm — table dropdown discovery', () => {
       />,
     );
 
-    const btn = screen.getByRole('button', { name: /discover tables/i });
+    const btn = screen.getByRole('button', { name: /^discover$/i });
     fireEvent.click(btn);
     expect(onDiscover).toHaveBeenCalledOnce();
   });

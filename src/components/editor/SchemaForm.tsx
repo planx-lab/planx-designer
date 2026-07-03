@@ -74,12 +74,12 @@ export function SchemaForm({
           value={currentValue}
           onChange={(e) => handleChange(field, e.target.value)}
           placeholder={field.placeholder ?? 'schema.table'}
-          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+          className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
         />
       );
     }
     return (
-      <div className="space-y-2">
+      <div className="flex items-center gap-1.5">
         <select
           id={field.name}
           value={currentValue}
@@ -87,7 +87,7 @@ export function SchemaForm({
             handleChange(field, e.target.value);
             onTableChange?.(e.target.value);
           }}
-          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+          className="flex-1 bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
         >
           {tables.map((t) => (
             <option key={`${t.schema}.${t.name}`} value={`${t.schema}.${t.name}`}>
@@ -100,9 +100,9 @@ export function SchemaForm({
             type="button"
             onClick={onDiscoverTables}
             disabled={loadingDiscovery}
-            className="bg-accent hover:bg-accent/80 text-white rounded-lg text-xs px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="shrink-0 bg-accent hover:bg-accent/80 text-white rounded-md text-[10px] px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
-            {loadingDiscovery ? 'Discovering...' : 'Discover Tables'}
+            {loadingDiscovery ? '...' : 'Discover'}
           </button>
         )}
       </div>
@@ -119,7 +119,7 @@ export function SchemaForm({
           value={currentValue}
           onChange={(e) => handleChange(field, e.target.value)}
           placeholder={field.placeholder ?? 'col1,col2 (empty = all)'}
-          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+          className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
         />
       );
     }
@@ -140,21 +140,20 @@ export function SchemaForm({
     };
 
     return (
-      <div className="space-y-1 max-h-48 overflow-y-auto rounded-lg border border-border p-2">
+      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 max-h-40 overflow-y-auto rounded-md border border-border p-1.5">
         {columns.map((col) => {
           const colId = `col-${col.name}`;
           return (
-            <label key={col.name} htmlFor={colId} className="flex items-center gap-2 text-sm text-foreground">
+            <label key={col.name} htmlFor={colId} className="flex items-center gap-1 text-[11px] text-foreground cursor-pointer">
               <input
                 id={colId}
                 type="checkbox"
                 checked={checked.has(col.name)}
                 onChange={() => toggle(col.name)}
-                className="accent-accent"
+                className="accent-accent h-3 w-3"
               />
-              <span>
-                {col.name} <span className="text-foreground/40">({col.type})</span>
-              </span>
+              <span className="truncate">{col.name}</span>
+              <span className="text-foreground/30 text-[10px]">{col.type}</span>
             </label>
           );
         })}
@@ -179,7 +178,7 @@ export function SchemaForm({
             value={currentValue as string}
             onChange={(e) => handleChange(field, e.target.value)}
             placeholder={field.placeholder}
-            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
           />
         );
 
@@ -200,7 +199,7 @@ export function SchemaForm({
               }
             }}
             placeholder={field.placeholder}
-            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
           />
         );
 
@@ -211,7 +210,7 @@ export function SchemaForm({
             id={field.name}
             checked={!!currentValue}
             onChange={(e) => handleChange(field, e.target.checked)}
-            className="rounded border-border bg-muted text-accent focus:ring-1 focus:ring-accent"
+            className="rounded border-border bg-muted text-accent focus:ring-1 focus:ring-accent h-3.5 w-3.5"
           />
         );
 
@@ -223,7 +222,7 @@ export function SchemaForm({
             value={currentValue as string}
             onChange={(e) => handleChange(field, e.target.value)}
             placeholder={field.placeholder}
-            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
           />
         );
 
@@ -233,7 +232,7 @@ export function SchemaForm({
             id={field.name}
             value={currentValue as string}
             onChange={(e) => handleChange(field, e.target.value)}
-            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
           >
             {(field.enumValues ?? []).map((opt) => (
               <option key={opt} value={opt}>
@@ -246,26 +245,24 @@ export function SchemaForm({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-1.5">
       {schema.fields.map((field) => {
         const labelText = field.label || field.name;
         return (
-          <div key={field.name}>
+          <div key={field.name} className="flex items-center gap-2">
             <label
               htmlFor={field.name}
-              className="block text-xs font-medium text-foreground/60 mb-1"
+              title={field.description || labelText}
+              className="w-24 shrink-0 text-right text-[11px] font-medium text-foreground/50 leading-5"
             >
               {labelText}
               {field.required && (
                 <span className="text-destructive ml-0.5">*</span>
               )}
             </label>
-            {field.description && (
-              <p className="text-[11px] text-foreground/40 mb-1.5">
-                {field.description}
-              </p>
-            )}
-            {renderControl(field)}
+            <div className="flex-1 min-w-0">
+              {renderControl(field)}
+            </div>
           </div>
         );
       })}
