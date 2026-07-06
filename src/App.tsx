@@ -2,6 +2,7 @@ import { LayoutDashboard, Workflow, Activity, GitBranch, Cpu } from 'lucide-reac
 import { useUIStore, type ViewId } from '@/stores/useUIStore';
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { DesignerView } from '@/components/DesignerView';
+import { Dashboard } from '@/components/admin/Dashboard';
 
 const navItems: { id: ViewId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -71,7 +72,7 @@ export function App() {
 
       {/* View content — full height below nav */}
       <main className="flex-1 min-h-0 overflow-hidden">
-        {activeView === 'dashboard' && <PlaceholderView name="Dashboard" />}
+        {activeView === 'dashboard' && <Dashboard />}
         {activeView === 'designer' && <DesignerView />}
         {activeView === 'executions' && <PlaceholderView name="Executions" />}
         {activeView === 'pipelines' && <PlaceholderView name="Pipelines" />}
