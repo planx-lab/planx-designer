@@ -3,6 +3,9 @@ import { useUIStore, type ViewId } from '@/stores/useUIStore';
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { DesignerView } from '@/components/DesignerView';
 import { Dashboard } from '@/components/admin/Dashboard';
+import { ExecutionsPage } from '@/components/admin/ExecutionsPage';
+import { PipelinesPage } from '@/components/admin/PipelinesPage';
+import { PluginsPage } from '@/components/admin/PluginsPage';
 
 const navItems: { id: ViewId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -23,14 +26,6 @@ function TenantInput() {
       placeholder="Tenant ID"
       className="bg-transparent text-xs text-foreground/40 placeholder:text-foreground/20 focus:outline-none w-28 text-right border-b border-transparent focus:border-border"
     />
-  );
-}
-
-function PlaceholderView({ name }: { name: string }) {
-  return (
-    <div className="flex items-center justify-center h-full text-foreground/30 text-sm">
-      {name} &mdash; coming soon
-    </div>
   );
 }
 
@@ -74,9 +69,9 @@ export function App() {
       <main className="flex-1 min-h-0 overflow-hidden">
         {activeView === 'dashboard' && <Dashboard />}
         {activeView === 'designer' && <DesignerView />}
-        {activeView === 'executions' && <PlaceholderView name="Executions" />}
-        {activeView === 'pipelines' && <PlaceholderView name="Pipelines" />}
-        {activeView === 'plugins' && <PlaceholderView name="Plugins" />}
+        {activeView === 'executions' && <ExecutionsPage />}
+        {activeView === 'pipelines' && <PipelinesPage />}
+        {activeView === 'plugins' && <PluginsPage />}
       </main>
     </div>
   );
