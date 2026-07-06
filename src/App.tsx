@@ -67,11 +67,13 @@ export function App() {
 
       {/* View content — full height below nav */}
       <main className="flex-1 min-h-0 overflow-hidden">
-        {activeView === 'dashboard' && <Dashboard />}
-        {activeView === 'designer' && <DesignerView />}
-        {activeView === 'executions' && <ExecutionsPage />}
-        {activeView === 'pipelines' && <PipelinesPage />}
-        {activeView === 'plugins' && <PluginsPage />}
+        {activeView === 'dashboard' && <div className="flex-1 min-h-0 overflow-auto"><Dashboard /></div>}
+        <div className={activeView === 'designer' ? 'flex-1 min-h-0 overflow-hidden' : 'hidden'}>
+          <DesignerView />
+        </div>
+        {activeView === 'executions' && <div className="flex-1 min-h-0 overflow-auto"><ExecutionsPage /></div>}
+        {activeView === 'pipelines' && <div className="flex-1 min-h-0 overflow-auto"><PipelinesPage /></div>}
+        {activeView === 'plugins' && <div className="flex-1 min-h-0 overflow-auto"><PluginsPage /></div>}
       </main>
     </div>
   );
