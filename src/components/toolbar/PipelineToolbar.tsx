@@ -20,7 +20,6 @@ export function PipelineToolbar() {
   const name = usePipelineStore((s) => s.name);
   const setName = usePipelineStore((s) => s.setName);
   const tenantId = usePipelineStore((s) => s.tenantId);
-  const setTenantId = usePipelineStore((s) => s.setTenantId);
   const buildSpec = usePipelineStore((s) => s.buildSpec);
   const validate = usePipelineStore((s) => s.validate);
   const nodes = usePipelineStore((s) => s.nodes);
@@ -145,15 +144,6 @@ export function PipelineToolbar() {
         onChange={(e) => setName(e.target.value)}
         placeholder="Pipeline name…"
         className="bg-transparent text-sm font-medium text-foreground placeholder:text-foreground/30 focus:outline-none w-48"
-      />
-
-      {/* Tenant ID */}
-      <input
-        type="text"
-        value={tenantId}
-        onChange={(e) => setTenantId(e.target.value)}
-        placeholder="Tenant ID…"
-        className="bg-transparent text-xs text-foreground/40 placeholder:text-foreground/20 focus:outline-none w-32"
       />
 
       <div className="flex-1" />

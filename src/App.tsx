@@ -1,168 +1,84 @@
-import { useEffect, useState } from 'react';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
-import { ReactFlowProvider } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-
-import { usePaletteStore } from '@/stores/usePaletteStore';
+import { LayoutDashboard, Workflow, Activity, GitBranch, Cpu } from 'lucide-react';
+import { useUIStore, type ViewId } from '@/stores/useUIStore';
 import { usePipelineStore } from '@/stores/usePipelineStore';
-import { PipelineCanvas } from '@/components/canvas/PipelineCanvas';
-import { PluginPalette } from '@/components/palette/PluginPalette';
-import { ConfigPanel } from '@/components/editor/ConfigPanel';
-import { SpecPreview } from '@/components/preview/SpecPreview';
-import { PipelineToolbar } from '@/components/toolbar/PipelineToolbar';
-import { useUIStore } from '@/stores/useUIStore';
-import { useKeyboardShortcuts } from '@/lib/keyboard';
-import { loadDraft, saveDraft } from '@/lib/draft';
+import { DesignerView } from '@/components/DesignerView';
 
-/** Registers global keyboard shortcuts. Must be inside ReactFlowProvider. */
-function KeyboardManager() {
-  useKeyboardShortcuts();
-  return null;
+const navItems: { id: ViewId; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'designer', label: 'Designer', icon: Workflow },
+  { id: 'executions', label: 'Executions', icon: Activity },
+  { id: 'pipelines', label: 'Pipelines', icon: GitBranch },
+  { id: 'plugins', label: 'Plugins', icon: Cpu },
+];
+
+function TenantInput() {
+  const tenantId = usePipelineStore((s) => s.tenantId);
+  const setTenantId = usePipelineStore((s) => s.setTenantId);
+  return (
+    <input
+      type="text"
+      value={tenantId}
+      onChange={(e) => setTenantId(e.target.value)}
+      placeholder="Tenant ID"
+      className="bg-transparent text-xs text-foreground/40 placeholder:text-foreground/20 focus:outline-none w-28 text-right border-b border-transparent focus:border-border"
+    />
+  );
+}
+
+function PlaceholderView({ name }: { name: string }) {
+  return (
+    <div className="flex items-center justify-center h-full text-foreground/30 text-sm">
+      {name} &mdash; coming soon
+    </div>
+  );
 }
 
 export function App() {
-  const fetchPlugins = usePaletteStore((s) => s.fetchPlugins);
-  const loading = usePaletteStore((s) => s.loading);
-  const nodes = usePipelineStore((s) => s.nodes);
-  const reset = usePipelineStore((s) => s.reset);
-  const tenantId = usePipelineStore((s) => s.tenantId);
-  const showPreview = useUIStore((s) => s.showPreview);
-
-  // Collapsible panels (for narrow viewports / focus mode)
-  const [paletteOpen, setPaletteOpen] = useState(true);
-  const [configOpen, setConfigOpen] = useState(true);
-
-  useEffect(() => {
-    fetchPlugins();
-  }, [fetchPlugins]);
-
-  // Restore a saved draft on first mount; otherwise init a fresh pipeline.
-  const restoreDraft = usePipelineStore((s) => s.restoreDraft);
-  useEffect(() => {
-    const draft = loadDraft();
-    if (draft && draft.nodes.length > 0) {
-      restoreDraft({
-        name: draft.name,
-        tenantId: draft.tenantId,
-        nodes: draft.nodes,
-      });
-    } else if (!tenantId) {
-      reset(import.meta.env.VITE_DEFAULT_TENANT ?? 'default-tenant');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Debounced auto-save of the user-authored pipeline (never the undo stacks).
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    const unsub = usePipelineStore.subscribe((s) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        if (s.nodes.length > 0) {
-          saveDraft({ name: s.name, tenantId: s.tenantId, nodes: s.nodes });
-        }
-      }, 500);
-    });
-    return () => {
-      unsub();
-      clearTimeout(timer);
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent mx-auto" />
-          <p className="text-foreground/60 text-sm">Loading plugins…</p>
-        </div>
-      </div>
-    );
-  }
+  const activeView = useUIStore((s) => s.activeView);
+  const setActiveView = useUIStore((s) => s.setActiveView);
 
   return (
-    <ReactFlowProvider>
-      <KeyboardManager />
-      <div className="flex h-screen flex-col bg-background">
-        <PipelineToolbar />
+    <div className="h-screen flex flex-col bg-background text-foreground">
+      {/* Top-level navigation bar */}
+      <header className="h-12 shrink-0 border-b border-border bg-surface flex items-center px-4 gap-1">
+        {/* Logo */}
+        <span className="font-mono font-semibold text-sm text-foreground mr-4">
+          Planx <span className="text-accent">x</span>
+        </span>
 
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left: Plugin Palette (collapsible) */}
-          {paletteOpen ? (
-            <aside className="w-72 shrink-0 border-r border-border bg-surface hidden md:flex flex-col">
-              <div className="flex justify-end p-1">
-                <button
-                  onClick={() => setPaletteOpen(false)}
-                  title="Hide palette"
-                  className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-surface-hover transition-colors"
-                >
-                  <PanelLeftClose size={16} />
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <PluginPalette />
-              </div>
-            </aside>
-          ) : (
+        {/* Nav tabs */}
+        <nav className="flex items-center gap-0.5">
+          {navItems.map(({ id, label, icon: Icon }) => (
             <button
-              onClick={() => setPaletteOpen(true)}
-              title="Show palette"
-              className="w-8 shrink-0 border-r border-border bg-surface flex items-center justify-center text-foreground/40 hover:text-foreground hover:bg-surface-hover transition-colors"
+              key={id}
+              onClick={() => setActiveView(id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeView === id
+                  ? 'bg-accent/15 text-accent'
+                  : 'text-foreground/40 hover:text-foreground/60 hover:bg-surface-hover'
+              }`}
             >
-              <PanelLeftOpen size={16} />
+              <Icon size={14} />
+              {label}
             </button>
-          )}
+          ))}
+        </nav>
 
-          {/* Center: Canvas or Preview */}
-          <main className="flex-1 relative">
-            {showPreview ? (
-              <SpecPreview />
-            ) : nodes.length === 0 ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-center space-y-3">
-                  <p className="text-foreground/40 text-lg">
-                    Drag a plugin from the palette to start
-                  </p>
-                  <p className="text-foreground/30 text-sm">
-                    Source → Processors → Sink
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <PipelineCanvas />
-            )}
-          </main>
+        {/* Spacer + tenant ID (right side) */}
+        <div className="flex-1" />
+        <TenantInput />
+      </header>
 
-          {/* Right: Config Panel (collapsible) */}
-          {configOpen ? (
-            <aside className="w-96 shrink-0 border-l border-border bg-surface hidden lg:flex flex-col">
-              <div className="flex justify-start p-1">
-                <button
-                  onClick={() => setConfigOpen(false)}
-                  title="Hide config"
-                  className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-surface-hover transition-colors"
-                >
-                  <PanelRightClose size={16} />
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <ConfigPanel />
-              </div>
-            </aside>
-          ) : (
-            <button
-              onClick={() => setConfigOpen(true)}
-              title="Show config"
-              className="w-8 shrink-0 border-l border-border bg-surface flex items-center justify-center text-foreground/40 hover:text-foreground hover:bg-surface-hover transition-colors"
-            >
-              <PanelRightOpen size={16} />
-            </button>
-          )}
-        </div>
-      </div>
-    </ReactFlowProvider>
+      {/* View content — full height below nav */}
+      <main className="flex-1 min-h-0 overflow-hidden">
+        {activeView === 'dashboard' && <PlaceholderView name="Dashboard" />}
+        {activeView === 'designer' && <DesignerView />}
+        {activeView === 'executions' && <PlaceholderView name="Executions" />}
+        {activeView === 'pipelines' && <PlaceholderView name="Pipelines" />}
+        {activeView === 'plugins' && <PlaceholderView name="Plugins" />}
+      </main>
+    </div>
   );
 }
 
 export default App;
-

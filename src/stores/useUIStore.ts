@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+export type ViewId = 'dashboard' | 'designer' | 'executions' | 'pipelines' | 'plugins';
+
 interface UIState {
   selectedNodeId: string | null;
   showPreview: boolean;
@@ -11,6 +13,7 @@ interface UIState {
     pipelineId?: string;
     error?: string;
   } | null;
+  activeView: ViewId;
 }
 
 interface UIActions {
@@ -23,6 +26,7 @@ interface UIActions {
     status: UIState['submitStatus'],
     result?: UIState['submitResult'],
   ) => void;
+  setActiveView: (v: ViewId) => void;
 }
 
 export const useUIStore = create<UIState & UIActions>((set) => ({
@@ -32,6 +36,7 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   validationErrors: [],
   submitStatus: 'idle',
   submitResult: null,
+  activeView: 'designer',
 
   selectNode: (id) => set({ selectedNodeId: id }),
   togglePreview: () =>
@@ -41,4 +46,5 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   setValidationErrors: (errors) => set({ validationErrors: errors }),
   setSubmitStatus: (status, result) =>
     set({ submitStatus: status, submitResult: result ?? null }),
+  setActiveView: (v) => set({ activeView: v }),
 }));
