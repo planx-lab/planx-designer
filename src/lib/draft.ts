@@ -1,9 +1,10 @@
+import type { Edge } from '@xyflow/react';
 import type { PipelineNode } from '@/types/node';
 
 /**
  * localStorage-backed draft persistence for the Pipeline Designer.
  *
- * Only the user-authored pipeline (name, tenantId, nodes) is persisted —
+ * Only the user-authored pipeline (name, tenantId, nodes, edges) is persisted —
  * never the undo/redo stacks (_past/_future) or transient UI state.
  */
 
@@ -13,6 +14,7 @@ export interface Draft {
   name: string;
   tenantId: string;
   nodes: PipelineNode[];
+  edges: Edge[];
   savedAt: number;
 }
 
@@ -34,6 +36,10 @@ export function loadDraft(): Draft | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Draft;
     if (!parsed.nodes || !Array.isArray(parsed.nodes)) return null;
+    // Backward compat: old drafts may not have edges
+    if (!parsed.edges || !Array.isArray(parsed.edges)) {
+      parsed.edges = [];
+    }
     return parsed;
   } catch {
     return null;

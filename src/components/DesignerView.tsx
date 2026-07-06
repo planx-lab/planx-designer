@@ -14,6 +14,9 @@ import { useUIStore } from '@/stores/useUIStore';
 import { useKeyboardShortcuts } from '@/lib/keyboard';
 import { loadDraft, saveDraft } from '@/lib/draft';
 
+/** Module-level flag — restore draft only ONCE per session, not on every mount. */
+let draftRestored = false;
+
 /** Registers global keyboard shortcuts. Must be inside ReactFlowProvider. */
 function KeyboardManager() {
   useKeyboardShortcuts();
@@ -36,15 +39,20 @@ export function DesignerView() {
     fetchPlugins();
   }, [fetchPlugins]);
 
-  // Restore a saved draft on first mount; otherwise init a fresh pipeline.
+  // Restore a saved draft only ONCE per session; otherwise init a fresh pipeline.
+  // Module-level flag prevents state loss when DesignerView unmounts/remounts
+  // (e.g. switching between Designer and Executions views).
   const restoreDraft = usePipelineStore((s) => s.restoreDraft);
   useEffect(() => {
+    if (draftRestored) return;
+    draftRestored = true;
     const draft = loadDraft();
     if (draft && draft.nodes.length > 0) {
       restoreDraft({
         name: draft.name,
         tenantId: draft.tenantId,
         nodes: draft.nodes,
+        edges: draft.edges ?? [],
       });
     } else if (!tenantId) {
       reset(import.meta.env.VITE_DEFAULT_TENANT ?? 'default-tenant');
@@ -59,7 +67,7 @@ export function DesignerView() {
       clearTimeout(timer);
       timer = setTimeout(() => {
         if (s.nodes.length > 0) {
-          saveDraft({ name: s.name, tenantId: s.tenantId, nodes: s.nodes });
+          saveDraft({ name: s.name, tenantId: s.tenantId, nodes: s.nodes, edges: s.edges });
         }
       }, 500);
     });

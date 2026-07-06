@@ -74,7 +74,7 @@ export function SchemaForm({
           value={currentValue}
           onChange={(e) => handleChange(field, e.target.value)}
           placeholder={field.placeholder ?? 'schema.table'}
-          className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
+          className="w-full bg-muted border border-border rounded-md h-8 px-2.5 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
         />
       );
     }
@@ -87,7 +87,7 @@ export function SchemaForm({
             handleChange(field, e.target.value);
             onTableChange?.(e.target.value);
           }}
-          className="flex-1 bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+          className="flex-1 bg-muted border border-border rounded-md h-8 px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
         >
           {tables.map((t) => (
             <option key={`${t.schema}.${t.name}`} value={`${t.schema}.${t.name}`}>
@@ -119,7 +119,7 @@ export function SchemaForm({
           value={currentValue}
           onChange={(e) => handleChange(field, e.target.value)}
           placeholder={field.placeholder ?? 'col1,col2 (at least one required)'}
-          className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
+          className="w-full bg-muted border border-border rounded-md h-8 px-2.5 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
         />
       );
     }
@@ -191,7 +191,7 @@ export function SchemaForm({
             value={currentValue as string}
             onChange={(e) => handleChange(field, e.target.value)}
             placeholder={field.placeholder}
-            className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border rounded-md h-8 px-2.5 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
           />
         );
 
@@ -212,7 +212,7 @@ export function SchemaForm({
               }
             }}
             placeholder={field.placeholder}
-            className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border rounded-md h-8 px-2.5 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
           />
         );
 
@@ -235,7 +235,7 @@ export function SchemaForm({
             value={currentValue as string}
             onChange={(e) => handleChange(field, e.target.value)}
             placeholder={field.placeholder}
-            className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border rounded-md h-8 px-2.5 text-xs text-foreground placeholder:text-foreground/25 focus:outline-none focus:ring-1 focus:ring-accent"
           />
         );
 
@@ -245,7 +245,7 @@ export function SchemaForm({
             id={field.name}
             value={currentValue as string}
             onChange={(e) => handleChange(field, e.target.value)}
-            className="w-full bg-muted border border-border rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border rounded-md h-8 px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
           >
             {(field.enumValues ?? []).map((opt) => (
               <option key={opt} value={opt}>
