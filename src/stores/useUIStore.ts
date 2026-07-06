@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getTenant, setTenant } from '@/hooks/queries';
 
 export type ViewId = 'dashboard' | 'designer' | 'executions' | 'pipelines' | 'plugins';
 
@@ -14,6 +15,7 @@ interface UIState {
     error?: string;
   } | null;
   activeView: ViewId;
+  tenantId: string;
 }
 
 interface UIActions {
@@ -27,6 +29,7 @@ interface UIActions {
     result?: UIState['submitResult'],
   ) => void;
   setActiveView: (v: ViewId) => void;
+  setTenantId: (t: string) => void;
 }
 
 export const useUIStore = create<UIState & UIActions>((set) => ({
@@ -37,6 +40,7 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   submitStatus: 'idle',
   submitResult: null,
   activeView: 'designer',
+  tenantId: getTenant(),
 
   selectNode: (id) => set({ selectedNodeId: id }),
   togglePreview: () =>
@@ -47,4 +51,8 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   setSubmitStatus: (status, result) =>
     set({ submitStatus: status, submitResult: result ?? null }),
   setActiveView: (v) => set({ activeView: v }),
+  setTenantId: (t) => {
+    setTenant(t);
+    set({ tenantId: t });
+  },
 }));
