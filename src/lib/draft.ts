@@ -8,7 +8,7 @@ import type { PipelineNode } from '@/types/node';
  * never the undo/redo stacks (_past/_future) or transient UI state.
  */
 
-const DRAFT_KEY = 'planx-designer:draft:v1';
+const DRAFT_KEY = 'planx-designer:draft:v2';
 
 export interface Draft {
   name: string;
@@ -36,10 +36,7 @@ export function loadDraft(): Draft | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Draft;
     if (!parsed.nodes || !Array.isArray(parsed.nodes)) return null;
-    // Backward compat: old drafts may not have edges
-    if (!parsed.edges || !Array.isArray(parsed.edges)) {
-      parsed.edges = [];
-    }
+    // Backward compat: v2+ drafts always have edges
     return parsed;
   } catch {
     return null;

@@ -143,7 +143,7 @@ export function ConfigPanel() {
             value={node.data.name}
             onChange={(e) => setNodeName(node.id, e.target.value)}
             placeholder="e.g. main-source"
-            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border h-8 px-2.5 text-xs rounded-md text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
@@ -168,7 +168,7 @@ export function ConfigPanel() {
                 );
               }
             }}
-            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border h-8 px-2.5 text-xs rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
           >
             {components.map((item) => (
               <option
@@ -249,7 +249,7 @@ export function ConfigPanel() {
               });
             }
           }}
-          className="bg-accent hover:bg-accent/80 text-white rounded-lg text-sm px-4 py-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-accent hover:bg-accent/80 text-white rounded-md text-xs px-3 py-1.5 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <CheckCircle className="inline-block w-4 h-4 mr-1.5 -mt-0.5" />
           {validateState.status === 'loading' ? 'Validating...' : 'Validate Config'}
