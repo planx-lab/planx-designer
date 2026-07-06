@@ -1,24 +1,28 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
 
 @theme {
-  /* Planx Designer Dark Mode (OLED) — from UI/UX Pro Max design system */
+  /* Planx Designer Dark Mode (OLED) — from the Unified UI design system */
   --color-background: #0F172A;
   --color-foreground: #F8FAFC;
+  --color-foreground-muted: #94A3B8;
   --color-primary: #1E293B;
   --color-on-primary: #FFFFFF;
   --color-secondary: #334155;
   --color-accent: #22C55E;
+  --color-accent-foreground: #0F172A;
   --color-muted: #272F42;
   --color-border: #475569;
   --color-destructive: #EF4444;
+  --color-warning: #F59E0B;
   --color-ring: #1E293B;
 
-  --color-surface: #1A2333;
-  --color-surface-hover: #243044;
+  --color-surface: #1E293B;
+  --color-surface-hover: #334155;
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-heading: 'Fira Code', monospace;
+  --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', monospace;
 }
 
 /* Base */
@@ -32,6 +36,11 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fira Code for headings and mono elements */
+h1, h2, h3, .font-heading {
+  font-family: var(--font-heading);
 }
 
 /* React Flow overrides — dark canvas */
