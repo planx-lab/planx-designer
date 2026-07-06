@@ -6,19 +6,30 @@
   --color-background: #0F172A;
   --color-foreground: #F8FAFC;
   --color-foreground-muted: #94A3B8;
-  --color-primary: #1E293B;
-  --color-on-primary: #FFFFFF;
-  --color-secondary: #334155;
   --color-accent: #22C55E;
   --color-accent-foreground: #0F172A;
   --color-muted: #272F42;
   --color-border: #475569;
   --color-destructive: #EF4444;
   --color-warning: #F59E0B;
-  --color-ring: #1E293B;
 
   --color-surface: #1E293B;
   --color-surface-hover: #334155;
+
+  /* shadcn/ui semantic aliases */
+  --color-primary: #22C55E;
+  --color-primary-foreground: #0F172A;
+  --color-secondary: #1E293B;
+  --color-secondary-foreground: #F8FAFC;
+  --color-card: #1E293B;
+  --color-card-foreground: #F8FAFC;
+  --color-popover: #1E293B;
+  --color-popover-foreground: #F8FAFC;
+  --color-input: #475569;
+  --color-muted-foreground: #94A3B8;
+  --color-destructive-foreground: #F8FAFC;
+  --color-ring: #22C55E;
+  --radius: 0.375rem;
 
   --font-heading: 'Fira Code', monospace;
   --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
