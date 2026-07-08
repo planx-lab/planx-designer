@@ -20,9 +20,30 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
  * API is paginated and has no dedicated timeseries endpoint, so we bucket the
  * recent executions client-side. Adequate for an Alpha monitoring panel.
  */
+type Bucket = {
+  time: string;
+  ts: number;
+  SUCCEEDED: number;
+  FAILED: number;
+  RUNNING: number;
+  PENDING: number;
+};
+
+// The status keys whose counts we increment per bucket.
+const STATUS_KEYS: readonly ExecutionRecord['status'][] = ['SUCCEEDED', 'FAILED', 'RUNNING', 'PENDING'];
+
+function incrementStatus(b: Bucket, status: ExecutionRecord['status']) {
+  switch (status) {
+    case 'SUCCEEDED': b.SUCCEEDED++; break;
+    case 'FAILED': b.FAILED++; break;
+    case 'RUNNING': b.RUNNING++; break;
+    case 'PENDING': b.PENDING++; break;
+  }
+}
+
 function bucketByHour(executions: ExecutionRecord[]) {
   const now = Date.now();
-  const buckets = new Map<string, { time: string; ts: number; SUCCEEDED: number; FAILED: number; RUNNING: number; PENDING: number }>();
+  const buckets = new Map<string, Bucket>();
 
   // Seed the last 24 hours so the chart has a continuous axis even with sparse data.
   for (let h = 23; h >= 0; h--) {
@@ -44,8 +65,8 @@ function bucketByHour(executions: ExecutionRecord[]) {
     ts.setMinutes(0, 0, 0);
     const key = ts.toISOString();
     const b = buckets.get(key);
-    if (b && e.status in b) {
-      (b as Record<string, number>)[e.status]++;
+    if (b && (STATUS_KEYS as readonly string[]).includes(e.status)) {
+      incrementStatus(b, e.status);
     }
   }
 

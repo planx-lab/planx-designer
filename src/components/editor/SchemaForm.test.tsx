@@ -108,7 +108,7 @@ describe('SchemaForm — value binding and onChange', () => {
     const schema = makeSchema([
       { name: 'tls', type: 'BOOLEAN', label: 'TLS' },
     ]);
-    const { rerender } = render(
+    render(
       <SchemaForm schema={schema} value={{ tls: false }} onChange={onChange} />,
     );
 
@@ -321,7 +321,7 @@ describe('SchemaForm — column checkboxes discovery', () => {
       { name: 'email', type: 'text', nullable: true },
     ];
     // Only "id" is checked — it is the last remaining, so it must be locked.
-    const { rerender } = render(
+    render(
       <SchemaForm
         schema={schema}
         value={{ columns: 'id' }}
