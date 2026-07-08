@@ -19,13 +19,18 @@ function TenantInput() {
   const tenantId = usePipelineStore((s) => s.tenantId);
   const setTenantId = usePipelineStore((s) => s.setTenantId);
   return (
-    <input
-      type="text"
-      value={tenantId}
-      onChange={(e) => setTenantId(e.target.value)}
-      placeholder="Tenant ID"
-      className="bg-transparent text-xs text-foreground/40 placeholder:text-foreground/20 focus:outline-none w-28 text-right border-b border-transparent focus:border-border"
-    />
+    <div className="flex items-center gap-1.5">
+      <label htmlFor="tenant-id" className="text-xs text-foreground/50 font-medium">Tenant</label>
+      <input
+        id="tenant-id"
+        type="text"
+        value={tenantId}
+        onChange={(e) => setTenantId(e.target.value)}
+        placeholder="Tenant ID"
+        aria-label="Tenant ID"
+        className="bg-transparent text-xs text-foreground/80 placeholder:text-foreground/40 focus:outline-none focus:ring-1 focus:ring-accent rounded px-1 w-28 text-right border-b border-transparent focus:border-accent"
+      />
+    </div>
   );
 }
 
@@ -43,18 +48,19 @@ export function App() {
         </span>
 
         {/* Nav tabs */}
-        <nav className="flex items-center gap-0.5">
+        <nav className="flex items-center gap-0.5" aria-label="Primary">
           {navItems.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveView(id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              aria-current={activeView === id ? 'page' : undefined}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeView === id
                   ? 'bg-accent/15 text-accent'
-                  : 'text-foreground/40 hover:text-foreground/60 hover:bg-surface-hover'
+                  : 'text-foreground/60 hover:text-foreground hover:bg-surface-hover'
               }`}
             >
-              <Icon size={14} />
+              <Icon size={14} aria-hidden />
               {label}
             </button>
           ))}

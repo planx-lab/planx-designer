@@ -257,13 +257,13 @@ export function ConfigPanel() {
 
         {/* Validation result */}
         {validateState.status === 'success' && (
-          <div className="mt-2 flex items-center gap-1.5 text-sm text-green-500">
+          <div className="mt-2 flex items-center gap-1.5 text-sm text-accent" role="status">
             <CheckCircle className="w-4 h-4" />
             <span>{validateState.message}</span>
           </div>
         )}
         {validateState.status === 'error' && (
-          <div className="mt-2 flex items-center gap-1.5 text-sm text-red-500">
+          <div className="mt-2 flex items-center gap-1.5 text-sm text-destructive" role="alert">
             <XCircle className="w-4 h-4" />
             <span>{validateState.message}</span>
           </div>

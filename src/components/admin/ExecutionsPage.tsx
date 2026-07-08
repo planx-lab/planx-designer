@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Loader2, Clock } from 'lucide-react';
 import { useExecutions } from '@/hooks/queries';
 import type { ExecutionRecord } from '@/types/admin';
 import { Badge } from '@/components/ui/badge';
@@ -18,21 +18,39 @@ const STATUSES: (ExecutionRecord['status'] | '')[] = ['', 'PENDING', 'RUNNING', 
 function StatusBadge({ status }: { status: ExecutionRecord['status'] }) {
   switch (status) {
     case 'SUCCEEDED':
-      return <Badge variant="default">SUCCEEDED</Badge>;
+      return (
+        <Badge variant="default" className="gap-1">
+          <CheckCircle2 size={11} aria-hidden />
+          SUCCEEDED
+        </Badge>
+      );
     case 'RUNNING':
       return (
         <Badge
           variant="secondary"
-          className="bg-warning/15 text-warning border-warning/20"
+          className="bg-warning/15 text-warning border-warning/20 gap-1"
         >
+          <Loader2 size={11} className="animate-spin" aria-hidden />
           RUNNING
         </Badge>
       );
     case 'FAILED':
-      return <Badge variant="destructive">FAILED</Badge>;
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <XCircle size={11} aria-hidden />
+          FAILED
+        </Badge>
+      );
+    case 'PENDING':
+      return (
+        <Badge variant="outline" className="text-foreground/60 border-foreground/20 gap-1">
+          <Clock size={11} aria-hidden />
+          PENDING
+        </Badge>
+      );
     default:
       return (
-        <Badge variant="outline" className="text-foreground/40 border-foreground/10">
+        <Badge variant="outline" className="text-foreground/60 border-foreground/20">
           {status}
         </Badge>
       );
@@ -59,13 +77,14 @@ export function ExecutionsPage() {
   return (
     <div className="p-6 space-y-4 h-full overflow-y-auto">
       {/* Filter bar */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Filter executions by status">
         <span className="text-xs text-foreground/50 uppercase tracking-wide font-medium">Filter:</span>
         {STATUSES.map((s) => (
           <button
             key={s}
             onClick={() => { setStatusFilter(s); setPage(1); }}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            aria-pressed={s === statusFilter}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               s === statusFilter
                 ? 'bg-accent/20 text-accent'
                 : 'bg-surface text-foreground/50 hover:text-foreground/80'
@@ -149,21 +168,23 @@ export function ExecutionsPage() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-foreground/40">
+        <span className="text-xs text-foreground/50" aria-live="polite">
           Page {page} of {totalPages}
         </span>
         <div className="flex gap-1">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous page"
+            className="p-1.5 rounded-lg text-foreground/50 hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <ChevronLeft size={16} />
           </button>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
-            className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            aria-label="Next page"
+            className="p-1.5 rounded-lg text-foreground/50 hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <ChevronRight size={16} />
           </button>

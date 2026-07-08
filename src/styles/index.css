@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
 
 @theme {
   /* Planx Designer Dark Mode (OLED) — from the Unified UI design system */
@@ -15,6 +14,13 @@
 
   --color-surface: #1E293B;
   --color-surface-hover: #334155;
+
+  /* Node-kind and status palette — semantic tokens so components stop
+     reaching for raw Tailwind colors (blue-500/amber-500/emerald-500). */
+  --color-source: #3B82F6;       /* blue-500 */
+  --color-processor: #F59E0B;    /* amber-500 */
+  --color-sink: #10B981;         /* emerald-500 */
+  --color-info: #38BDF8;         /* sky-400 — RUNNING / in-flight */
 
   /* shadcn/ui semantic aliases */
   --color-primary: #22C55E;
@@ -34,6 +40,16 @@
   --font-heading: 'Fira Code', monospace;
   --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'Fira Code', monospace;
+}
+
+/* Respect users who prefer reduced motion — disable spinners/pulses/transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Base */

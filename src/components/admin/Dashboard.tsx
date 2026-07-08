@@ -1,4 +1,4 @@
-import { Activity, Zap, Plug, Heart, Clock } from 'lucide-react';
+import { Activity, Zap, Plug, Heart, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useExecutions, usePipelines, usePlugins, useHealth } from '@/hooks/queries';
 import type { ExecutionRecord } from '@/types/admin';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
@@ -90,21 +90,39 @@ export function SummaryCards() {
 function StatusBadge({ status }: { status: ExecutionRecord['status'] }) {
   switch (status) {
     case 'SUCCEEDED':
-      return <Badge variant="default">SUCCEEDED</Badge>;
+      return (
+        <Badge variant="default" className="gap-1">
+          <CheckCircle2 size={11} aria-hidden />
+          SUCCEEDED
+        </Badge>
+      );
     case 'RUNNING':
       return (
         <Badge
           variant="secondary"
-          className="bg-warning/15 text-warning border-warning/20 hover:bg-warning/25"
+          className="bg-warning/15 text-warning border-warning/20 hover:bg-warning/25 gap-1"
         >
+          <Loader2 size={11} className="animate-spin" aria-hidden />
           RUNNING
         </Badge>
       );
     case 'FAILED':
-      return <Badge variant="destructive">FAILED</Badge>;
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <XCircle size={11} aria-hidden />
+          FAILED
+        </Badge>
+      );
+    case 'PENDING':
+      return (
+        <Badge variant="outline" className="text-foreground/60 border-foreground/20 gap-1">
+          <Clock size={11} aria-hidden />
+          PENDING
+        </Badge>
+      );
     default:
       return (
-        <Badge variant="outline" className="text-foreground/40 border-foreground/10">
+        <Badge variant="outline" className="text-foreground/60 border-foreground/20">
           {status}
         </Badge>
       );

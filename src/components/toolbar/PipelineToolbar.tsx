@@ -153,7 +153,8 @@ export function PipelineToolbar() {
         onClick={undo}
         disabled={_past.length === 0}
         title="Undo (Ctrl+Z)"
-        className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-surface-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Undo"
+        className="p-1.5 rounded-lg text-foreground/60 hover:text-foreground hover:bg-surface-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <Undo2 size={16} />
       </button>
@@ -161,7 +162,8 @@ export function PipelineToolbar() {
         onClick={redo}
         disabled={_future.length === 0}
         title="Redo (Ctrl+Shift+Z)"
-        className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-surface-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Redo"
+        className="p-1.5 rounded-lg text-foreground/60 hover:text-foreground hover:bg-surface-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <Redo2 size={16} />
       </button>
@@ -228,10 +230,10 @@ export function PipelineToolbar() {
         <div
           className={`flex items-center gap-1.5 text-xs whitespace-nowrap ${
             executionStatus.status === 'succeeded'
-              ? 'text-green-400'
+              ? 'text-accent'
               : executionStatus.status === 'failed'
-                ? 'text-red-400'
-                : 'text-yellow-400'
+                ? 'text-destructive'
+                : 'text-warning'
           }`}
         >
           {(executionStatus.status === 'pending' || executionStatus.status === 'running') && (
@@ -261,10 +263,10 @@ export function PipelineToolbar() {
               key={nodeId}
               className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${
                 ns.status === 'running'
-                  ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
+                  ? 'bg-warning/10 border-warning/30 text-warning'
                   : ns.status === 'completed'
-                    ? 'bg-green-500/10 border-green-500/30 text-green-300'
-                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                    ? 'bg-accent/10 border-accent/30 text-accent'
+                    : 'bg-destructive/10 border-destructive/30 text-destructive'
               }`}
             >
               {ns.status === 'completed' && <CheckCircle2 size={10} />}

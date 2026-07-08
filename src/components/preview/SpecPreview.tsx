@@ -69,14 +69,16 @@ export function SpecPreview() {
           {/* Copy */}
           <button
             onClick={handleCopy}
-            className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-foreground/40 hover:text-foreground"
+            aria-label={copied ? 'Copied' : 'Copy to clipboard'}
+            className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-foreground/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {copied ? <Check size={16} className="text-accent" /> : <Copy size={16} />}
           </button>
           {/* Close */}
           <button
             onClick={togglePreview}
-            className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-foreground/40 hover:text-foreground"
+            aria-label="Close preview"
+            className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-foreground/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <X size={16} />
           </button>
@@ -88,20 +90,20 @@ export function SpecPreview() {
         {activeTab === 'validation' ? (
           <div className="p-4 space-y-2">
             {validationResult.valid ? (
-              <div className="flex items-center gap-2 text-green-400">
+              <div className="flex items-center gap-2 text-accent">
                 <CheckCircle className="w-4 h-4" />
                 <span>Pipeline is valid</span>
               </div>
             ) : (
               <>
-                <div className="flex items-center gap-2 text-red-400 mb-2">
+                <div className="flex items-center gap-2 text-destructive mb-2" role="alert">
                   <AlertCircle className="w-4 h-4" />
                   <span>{validationResult.errors.length} issue{validationResult.errors.length > 1 ? 's' : ''} found</span>
                 </div>
-                <ul className="space-y-1 text-sm text-red-300">
+                <ul className="space-y-1 text-sm text-destructive/80">
                   {validationResult.errors.map((e, i) => (
                     <li key={i} className="flex gap-1">
-                      <span className="text-red-400 shrink-0">✗</span>
+                      <span className="text-destructive shrink-0" aria-hidden>✗</span>
                       <span>{e}</span>
                     </li>
                   ))}

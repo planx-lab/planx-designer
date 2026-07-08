@@ -14,7 +14,7 @@ function KindBadge({ kind }: { kind: PluginDescriptor['type'] }) {
       return (
         <Badge
           variant="secondary"
-          className="bg-blue/15 text-blue border-blue/20"
+          className="bg-source/15 text-source border-source/20"
         >
           source
         </Badge>
@@ -23,7 +23,7 @@ function KindBadge({ kind }: { kind: PluginDescriptor['type'] }) {
       return (
         <Badge
           variant="secondary"
-          className="bg-amber/15 text-amber border-amber/20"
+          className="bg-processor/15 text-processor border-processor/20"
         >
           processor
         </Badge>
@@ -32,7 +32,7 @@ function KindBadge({ kind }: { kind: PluginDescriptor['type'] }) {
       return (
         <Badge
           variant="secondary"
-          className="bg-emerald/15 text-emerald border-emerald/20"
+          className="bg-sink/15 text-sink border-sink/20"
         >
           sink
         </Badge>

@@ -7,15 +7,15 @@ import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
 
 const typeColors: Record<string, string> = {
-  source: 'border-blue-500/50 bg-blue-500/10',
-  processor: 'border-amber-500/50 bg-amber-500/10',
-  sink: 'border-emerald-500/50 bg-emerald-500/10',
+  source: 'border-source/50 bg-source/10',
+  processor: 'border-processor/50 bg-processor/10',
+  sink: 'border-sink/50 bg-sink/10',
 };
 
 const typeBadgeColors: Record<string, string> = {
-  source: 'bg-blue-500/20 text-blue-300',
-  processor: 'bg-amber-500/20 text-amber-300',
-  sink: 'bg-emerald-500/20 text-emerald-300',
+  source: 'bg-source/20 text-source',
+  processor: 'bg-processor/20 text-processor',
+  sink: 'bg-sink/20 text-sink',
 };
 
 export const PipelineNode = memo(function PipelineNode({
@@ -35,11 +35,20 @@ export const PipelineNode = memo(function PipelineNode({
   return (
     <div
       onClick={() => selectNode(id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectNode(id);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${data.nodeType} node: ${data.pluginLabel || data.pluginId || 'Unconfigured'}`}
       className={`
         relative w-[260px] rounded-xl border-2 p-4 transition-all duration-200
         ${typeColors[data.nodeType]}
         ${selected ? 'ring-2 ring-accent border-accent' : 'border-border/50 hover:border-border'}
-        cursor-pointer
+        cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
       `}
     >
       {/* Handles — per kind constraints: source=output-only, sink=input-only, processor=both */}
@@ -71,7 +80,8 @@ export const PipelineNode = memo(function PipelineNode({
               e.stopPropagation();
               removeNode(id);
             }}
-            className="text-foreground/30 hover:text-destructive transition-colors p-0.5 rounded"
+            aria-label={`Delete ${data.nodeType} node`}
+            className="text-foreground/50 hover:text-destructive transition-colors p-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Trash2 size={14} />
           </button>
@@ -85,7 +95,7 @@ export const PipelineNode = memo(function PipelineNode({
 
       {/* Node name */}
       {data.name && (
-        <p className="text-foreground/40 text-xs mt-0.5 truncate">
+        <p className="text-foreground/50 text-xs mt-0.5 truncate">
           {data.name}
         </p>
       )}

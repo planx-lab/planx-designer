@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { usePipelines } from '@/hooks/queries';
 import { Badge } from '@/components/ui/badge';
@@ -117,17 +117,26 @@ export function PipelinesPage() {
                 </TableRow>
               )}
               {pipelines.map((p) => (
-                <>
+                <Fragment key={p.pipelineId}>
                   <TableRow
-                    key={p.pipelineId}
                     onClick={() => toggleExpand(p.pipelineId)}
-                    className="border-border/50 hover:bg-surface-hover cursor-pointer"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleExpand(p.pipelineId);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={expanded === p.pipelineId}
+                    aria-label={`Pipeline ${p.pipelineId}, ${p.executionCount ?? 0} executions, click to ${expanded === p.pipelineId ? 'collapse' : 'expand'}`}
+                    className="border-border/50 hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
                   >
                     <TableCell className="px-4 py-3 w-8">
                       {expanded === p.pipelineId ? (
-                        <ChevronDown size={14} className="text-foreground/40" />
+                        <ChevronDown size={14} className="text-foreground/50" aria-hidden />
                       ) : (
-                        <ChevronRight size={14} className="text-foreground/40" />
+                        <ChevronRight size={14} className="text-foreground/50" aria-hidden />
                       )}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-foreground/80 font-medium text-sm font-mono">
@@ -139,7 +148,7 @@ export function PipelinesPage() {
                     <TableCell className="px-4 py-3 text-foreground/60 text-sm">
                       {p.executionCount ?? 0}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-foreground/40 text-xs whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-foreground/50 text-xs whitespace-nowrap">
                       {new Date(p.createdAt).toLocaleString()}
                     </TableCell>
                   </TableRow>
@@ -168,7 +177,7 @@ export function PipelinesPage() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               ))}
             </TableBody>
           </Table>
@@ -177,21 +186,23 @@ export function PipelinesPage() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-foreground/40">
+        <span className="text-xs text-foreground/50" aria-live="polite">
           Page {page} of {totalPages}
         </span>
         <div className="flex gap-1">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous page"
+            className="p-1.5 rounded-lg text-foreground/50 hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <ChevronLeft size={16} />
           </button>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
-            className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            aria-label="Next page"
+            className="p-1.5 rounded-lg text-foreground/50 hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <ChevronRightIcon size={16} />
           </button>
