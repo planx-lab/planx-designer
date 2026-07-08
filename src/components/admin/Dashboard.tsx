@@ -1,6 +1,7 @@
 import { Activity, Zap, Plug, Heart, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useExecutions, usePipelines, usePlugins, useHealth } from '@/hooks/queries';
 import type { ExecutionRecord } from '@/types/admin';
+import { ExecutionsChart } from '@/components/admin/ExecutionsChart';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -57,6 +58,8 @@ export function SummaryCards() {
     },
   ];
 
+  const isLoading = pipelines.isLoading || executions.isLoading || plugins.isLoading;
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map(({ label, value, icon: Icon, healthOk }) => (
@@ -67,16 +70,21 @@ export function SummaryCards() {
             </span>
             <Icon
               size={16}
+              aria-hidden
               className={cn(
-                'text-foreground/40',
+                'text-foreground/50',
                 healthOk === 'ok' && 'text-accent',
                 healthOk && healthOk !== 'ok' && 'text-destructive',
               )}
             />
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="font-mono text-2xl font-semibold text-foreground">
-              {value}
+            <div className="font-mono text-2xl font-semibold text-foreground tabular-nums">
+              {isLoading && value === '-' ? (
+                <span className="inline-block h-7 w-12 animate-pulse rounded bg-surface-hover align-middle" aria-label="Loading" />
+              ) : (
+                value
+              )}
             </div>
           </CardContent>
         </Card>
@@ -224,6 +232,7 @@ export function Dashboard() {
   return (
     <div className="p-6 space-y-6 h-full overflow-y-auto">
       <SummaryCards />
+      <ExecutionsChart />
       <RecentExecutions />
     </div>
   );

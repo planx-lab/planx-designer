@@ -135,24 +135,26 @@ export function ConfigPanel() {
       <div className="p-4 space-y-4 border-b border-border">
         {/* Name */}
         <div>
-          <label className="block text-xs font-medium text-foreground/60 mb-1">
+          <label htmlFor={`node-name-${node.id}`} className="block text-xs font-medium text-foreground/60 mb-1">
             Node Name
           </label>
           <input
+            id={`node-name-${node.id}`}
             type="text"
             value={node.data.name}
             onChange={(e) => setNodeName(node.id, e.target.value)}
             placeholder="e.g. main-source"
-            className="w-full bg-muted border border-border h-8 px-2.5 text-xs rounded-md text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-muted border border-border h-8 px-2.5 text-xs rounded-md text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
         {/* Component selector */}
         <div>
-          <label className="block text-xs font-medium text-foreground/60 mb-1">
+          <label htmlFor={`node-component-${node.id}`} className="block text-xs font-medium text-foreground/60 mb-1">
             Component
           </label>
           <select
+            id={`node-component-${node.id}`}
             value={`${node.data.pluginId}/${node.data.componentId}`}
             onChange={(e) => {
               const [pluginId, componentId] = e.target.value.split('/');
@@ -185,9 +187,9 @@ export function ConfigPanel() {
       {/* Config editor */}
       <div className="flex-1 p-4">
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs font-medium text-foreground/60">
+          <span className="block text-xs font-medium text-foreground/60" id={`config-heading-${node.id}`}>
             Config
-          </label>
+          </span>
           {hasSchema && (
             <button
               type="button"
@@ -200,7 +202,7 @@ export function ConfigPanel() {
         </div>
 
         {hasSchema && !showRawJson ? (
-          <div className="rounded-lg border border-border p-4">
+          <div className="rounded-lg border border-border p-4" role="group" aria-labelledby={`config-heading-${node.id}`}>
             <SchemaForm
               schema={configSchema}
               value={node.data.config}
@@ -213,7 +215,7 @@ export function ConfigPanel() {
             />
           </div>
         ) : (
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-lg border border-border overflow-hidden" role="group" aria-labelledby={`config-heading-${node.id}`}>
             <JsonEditorField
               value={node.data.config}
               onChange={(config) => setConfig(node.id, config)}

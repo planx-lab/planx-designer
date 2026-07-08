@@ -1,5 +1,6 @@
 import { LayoutDashboard, Workflow, Activity, GitBranch, Cpu } from 'lucide-react';
-import { useUIStore, type ViewId } from '@/stores/useUIStore';
+import { useLocation, useNavigate } from 'react-router-dom';
+import type { ViewId } from '@/stores/useUIStore';
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { DesignerView } from '@/components/DesignerView';
 import { Dashboard } from '@/components/admin/Dashboard';
@@ -14,6 +15,13 @@ const navItems: { id: ViewId; label: string; icon: typeof LayoutDashboard }[] = 
   { id: 'pipelines', label: 'Pipelines', icon: GitBranch },
   { id: 'plugins', label: 'Plugins', icon: Cpu },
 ];
+
+/** Map the URL pathname to a ViewId (default: designer). */
+function pathnameToView(pathname: string): ViewId {
+  const seg = pathname.replace(/^\//, '').split('/')[0];
+  if (seg && navItems.some((n) => n.id === seg)) return seg as ViewId;
+  return 'designer';
+}
 
 function TenantInput() {
   const tenantId = usePipelineStore((s) => s.tenantId);
@@ -35,8 +43,11 @@ function TenantInput() {
 }
 
 export function App() {
-  const activeView = useUIStore((s) => s.activeView);
-  const setActiveView = useUIStore((s) => s.setActiveView);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeView = pathnameToView(location.pathname);
+
+  const setActiveView = (v: ViewId) => navigate(`/${v === 'designer' ? '' : v}`);
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">

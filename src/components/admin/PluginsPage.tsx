@@ -44,17 +44,24 @@ function PoolBar({ pool }: { pool: NonNullable<PluginDescriptor['pool']> }) {
   const pct = Math.min(100, ((pool.active + pool.idle) / Math.max(1, pool.max)) * 100);
   return (
     <div className="space-y-1.5">
-      <div className="flex justify-between text-xs text-foreground/50">
+      <div className="flex justify-between text-xs text-foreground/50 tabular-nums">
         <span>Pool: {pool.active + pool.idle}/{pool.max}</span>
         <span>Active: {pool.active}</span>
       </div>
-      <div className="h-2 rounded-full bg-muted overflow-hidden">
+      <div
+        className="h-2 rounded-full bg-muted overflow-hidden"
+        role="progressbar"
+        aria-valuenow={pool.active + pool.idle}
+        aria-valuemin={0}
+        aria-valuemax={pool.max}
+        aria-label={`Pool utilization: ${pool.active + pool.idle} of ${pool.max} in use`}
+      >
         <div
           className="h-full rounded-full bg-accent transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="flex justify-between text-[10px] text-foreground/30">
+      <div className="flex justify-between text-[10px] text-foreground/40 tabular-nums">
         <span>Min idle: {pool.minIdle}</span>
         <span>Max idle: {pool.maxIdle}</span>
       </div>
