@@ -15,7 +15,9 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // No rewrite: the engine now serves API under /api (Phase 2 of
+        // planx-spec/unified-ui-design.md). Previously /api was stripped
+        // because the engine served API at root.
       },
     },
   },
