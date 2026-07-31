@@ -1,4 +1,5 @@
 import type { PipelineSpec, NodeSpec, EdgeSpec } from '@/types/pipeline';
+import { API_VERSION } from '@/types/pipeline';
 import type { PipelineNode } from '@/types/node';
 import type { Edge } from '@xyflow/react';
 import type { ComponentKind } from '@/types/plugin';
@@ -25,7 +26,7 @@ export function buildSpec(
     to: nameById.get(e.target) ?? e.target,
   }));
   return {
-    apiVersion: 'planx.io/v4',
+    apiVersion: API_VERSION,
     kind: 'Pipeline',
     metadata: { ...metadata },
     spec: { nodes: nodeSpecs, edges: edgeSpecs },

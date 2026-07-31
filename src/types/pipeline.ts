@@ -1,5 +1,10 @@
 /** PipelineSpec v4 DAG types. FROZEN — matches planx-spec/dag-spec.md (ADR-001). */
 
+/** Canonical protocol version. Domain-agnostic (planx/v4), forward-compatible
+ *  to planx/v5. Centralized so a version bump is a one-line change.
+ *  See planx-spec/unified-ui-design.md §3.3. */
+export const API_VERSION = 'planx/v4';
+
 export type NodeKind = 'source' | 'processor' | 'sink';
 
 export interface NodeSpec {
@@ -18,7 +23,7 @@ export interface EdgeSpec {
 }
 
 export interface PipelineSpec {
-  apiVersion: 'planx.io/v4';
+  apiVersion: typeof API_VERSION;
   kind: 'Pipeline';
   metadata: { name: string; tenantId: string };
   spec: {

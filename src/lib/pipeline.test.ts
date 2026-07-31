@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildSpec, fromSpec, validateSpec, generateNodeName } from './pipeline';
 import type { PipelineNode, PipelineNodeData } from '@/types/node';
 import type { Edge } from '@xyflow/react';
+import { API_VERSION } from '@/types/pipeline';
 
 // ── Fixtures ─────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ const baseEdges = (): Edge[] => [
 describe('buildSpec (DAG)', () => {
   it('produces a valid PipelineSpec v4 envelope', () => {
     const spec = buildSpec(baseNodes(), baseEdges(), { name: 'demo', tenantId: 't1' });
-    expect(spec.apiVersion).toBe('planx.io/v4');
+    expect(spec.apiVersion).toBe(API_VERSION);
     expect(spec.kind).toBe('Pipeline');
     expect(spec.metadata).toEqual({ name: 'demo', tenantId: 't1' });
   });

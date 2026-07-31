@@ -1,5 +1,6 @@
 import type { PipelineSpec, NodeKind } from '@/types/pipeline';
 import type { ValidationResult } from '@/types/pipeline';
+import { API_VERSION } from '@/types/pipeline';
 
 const NODE_ID_RE = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
 const KINDS: NodeKind[] = ['source', 'processor', 'sink'];
@@ -10,7 +11,7 @@ export function validateSpec(spec: PipelineSpec): ValidationResult {
   const errors: string[] = [];
   if (!spec.metadata.name?.trim()) errors.push('Pipeline name is required.');
   if (!spec.metadata.tenantId?.trim()) errors.push('Tenant ID is required.');
-  if (spec.apiVersion !== 'planx.io/v4') errors.push('apiVersion must be planx.io/v4.');
+  if (spec.apiVersion !== API_VERSION) errors.push(`apiVersion must be ${API_VERSION}.`);
   if (spec.kind !== 'Pipeline') errors.push('kind must be Pipeline.');
   if (spec.spec.nodes.length < 2) errors.push('Pipeline needs at least 2 nodes (1 source + 1 sink).');
 
