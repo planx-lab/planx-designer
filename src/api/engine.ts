@@ -2,10 +2,17 @@ import { api } from './client';
 import type {
   ListExecutionsResponse,
   ListPipelinesResponse,
-  ListPluginsResponse,
   HealthResponse,
   PipelineSummary,
 } from '@/types/admin';
+import type { PluginInfo } from '@/types/plugin';
+
+/** GET /plugins response. Uses the canonical PluginInfo (ADR-008
+ *  self-describing format: id/version/displayName/components), matching the
+ *  palette's contract — not the legacy flat PluginDescriptor. */
+export interface PluginsResponse {
+  plugins: PluginInfo[];
+}
 
 function tenantId(): string {
   return localStorage.getItem('planx-admin:tenant') ?? 'default-tenant';
@@ -46,8 +53,8 @@ export function fetchPipelineDetail(pipelineId: string): Promise<PipelineSummary
 
 // ── Plugins ──
 
-export function fetchPlugins(): Promise<ListPluginsResponse> {
-  return api.get<ListPluginsResponse>('/plugins');
+export function fetchPlugins(): Promise<PluginsResponse> {
+  return api.get<PluginsResponse>('/plugins');
 }
 
 // ── Health ──

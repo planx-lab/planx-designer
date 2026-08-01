@@ -180,7 +180,7 @@ export function App() {
         </header>
 
         {/* View content — full height below the top bar. */}
-        <main className="flex-1 min-h-0 overflow-hidden">
+        <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {activeView === 'dashboard' && (
             <div className="flex-1 min-h-0 overflow-auto">
               <Dashboard />
