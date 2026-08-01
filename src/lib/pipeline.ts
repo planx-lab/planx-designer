@@ -35,10 +35,17 @@ export function buildSpec(
 
 /** Reconstruct React Flow nodes + edges from a DAG PipelineSpec. */
 export function fromSpec(spec: PipelineSpec): { nodes: PipelineNode[]; edges: Edge[] } {
+  // Layout nodes in a vertical column (source at top, processors, sink at bottom)
+  // so a loaded pipeline is immediately readable instead of stacked at {0,0}.
+  // A simple deterministic layout; the user can drag to refine.
+  const kindOrder: Record<string, number> = { source: 0, processor: 1, sink: 2 };
+  const indexed = spec.spec.nodes.map((ns, i) => ({ ns, i }));
+  indexed.sort((a, b) => (kindOrder[a.ns.kind] ?? 3) - (kindOrder[b.ns.kind] ?? 3));
+
   const nodes: PipelineNode[] = spec.spec.nodes.map((ns) => ({
     id: ns.id,
     type: 'pipelineNode',
-    position: { x: 0, y: 0 },
+    position: { x: 250, y: 60 + (indexed.findIndex((n) => n.ns.id === ns.id)) * 120 },
     data: {
       name: ns.id,
       pluginId: ns.plugin_id,
