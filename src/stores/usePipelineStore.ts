@@ -69,6 +69,15 @@ interface PipelineActions {
   _sync: (nodes: PipelineNode[]) => void;
 }
 
+// sanitizeEdges drops any edge whose source/target isn't a known node id.
+// This is the invariant guard (Layer 1) that makes dangling edges impossible
+// to survive a load: a corrupted persisted draft (e.g. with stale UUIDs from a
+// deleted node) is healed on restore, so refresh can never re-infect the canvas.
+function sanitizeEdges(nodes: PipelineNode[], edges: Edge[]): Edge[] {
+  const ids = new Set(nodes.map((n) => n.id));
+  return edges.filter((e) => ids.has(e.source) && ids.has(e.target));
+}
+
 // ── Store ────────────────────────────────────────────────
 
 export const usePipelineStore = create<PipelineState & PipelineActions>(
@@ -280,7 +289,8 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
 
     loadSpec: (spec, pipelineId = null) => {
       const { nodes, edges } = fromSpec(spec);
-      set({ name: spec.metadata.name, tenantId: spec.metadata.tenantId, nodes, edges, pipelineId, _past: [], _future: [] });
+      const cleanEdges = sanitizeEdges(nodes, edges);
+      set({ name: spec.metadata.name, tenantId: spec.metadata.tenantId, nodes, edges: cleanEdges, pipelineId, _past: [], _future: [] });
     },
 
     buildSpec: () =>
@@ -296,7 +306,8 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     },
 
     restoreDraft: ({ name, tenantId, nodes, edges }) => {
-      set({ name, tenantId, nodes, edges: edges ?? [], _past: [], _future: [] });
+      const cleanEdges = sanitizeEdges(nodes, edges ?? []);
+      set({ name, tenantId, nodes, edges: cleanEdges, _past: [], _future: [] });
     },
 
     // ── Undo / Redo ──

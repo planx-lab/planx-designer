@@ -21,10 +21,14 @@ export function buildSpec(
     if (n.data.config && Object.keys(n.data.config).length > 0) spec.config = n.data.config;
     return spec;
   });
-  const edgeSpecs: EdgeSpec[] = edges.map((e) => ({
-    from: nameById.get(e.source) ?? e.source,
-    to: nameById.get(e.target) ?? e.target,
-  }));
+  // Defensive: drop edges whose source/target isn't a known node. Without this,
+  // a stale/dangling edge (e.g. from a corrupted persisted draft) would emit a
+  // spec that fails engine validation with "node X not found". The map lookup
+  // returns undefined for unknown ids → filter those out so submit never sends
+  // a corrupted graph. (Layer 3 of the canvas-state-invariants fix.)
+  const edgeSpecs: EdgeSpec[] = edges
+    .map((e) => ({ from: nameById.get(e.source), to: nameById.get(e.target) }))
+    .filter((e): e is EdgeSpec => e.from !== undefined && e.to !== undefined);
   return {
     apiVersion: API_VERSION,
     kind: 'Pipeline',
