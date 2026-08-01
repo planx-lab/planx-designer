@@ -4,7 +4,7 @@ import { basicSetup } from 'codemirror';
 import { json, jsonParseLinter } from '@codemirror/lang-json';
 import { lintGutter, linter } from '@codemirror/lint';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, SlidersHorizontal } from 'lucide-react';
 
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
@@ -190,15 +190,16 @@ export function ConfigPanel() {
           <span className="block text-xs font-medium text-foreground/60" id={`config-heading-${node.id}`}>
             Config
           </span>
-          {hasSchema && (
-            <button
-              type="button"
-              onClick={() => setShowRawJson((v) => !v)}
-              className="text-accent text-xs hover:underline"
-            >
-              {showRawJson ? 'Schema Form' : 'Raw JSON'}
-            </button>
-          )}
+          {/* Toggle between guided form (or empty-state) and raw JSON.
+              Always available: power users can edit raw config even when a
+              component declares no schema. */}
+          <button
+            type="button"
+            onClick={() => setShowRawJson((v) => !v)}
+            className="text-accent text-xs hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
+          >
+            {showRawJson ? (hasSchema ? 'Schema Form' : 'Done') : 'Raw JSON'}
+          </button>
         </div>
 
         {hasSchema && !showRawJson ? (
@@ -213,6 +214,24 @@ export function ConfigPanel() {
               onTableChange={handleTableChange}
               loadingDiscovery={discovery.loading}
             />
+          </div>
+        ) : !hasSchema && !showRawJson ? (
+          /* No schema (component takes no declared config). Show a guided
+             empty-state instead of a blank `{}` editor — avoids a "dead end"
+             where the user can't tell whether the emptiness is intended or a
+             bug. Raw JSON remains one toggle away for advanced use. Pattern
+             follows n8n (helpful hint over blank panel) and the empty-state
+             canon (icon + headline + description + action). */
+          <div
+            className="rounded-lg border border-dashed border-border p-6 flex flex-col items-center text-center"
+            role="group"
+            aria-labelledby={`config-heading-${node.id}`}
+          >
+            <SlidersHorizontal size={22} className="text-foreground/30 mb-2" aria-hidden />
+            <p className="text-sm font-medium text-foreground/80">No configuration needed</p>
+            <p className="text-xs text-foreground/45 mt-1 max-w-[28ch]">
+              This component runs as-is. Switch to <span className="text-foreground/70">Raw JSON</span> above if you need to pass advanced config.
+            </p>
           </div>
         ) : (
           <div className="rounded-lg border border-border overflow-hidden" role="group" aria-labelledby={`config-heading-${node.id}`}>
