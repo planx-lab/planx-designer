@@ -114,3 +114,34 @@ export async function getExecution(
   );
   return normalizeStatus(r);
 }
+
+/** Full pipeline record returned by GET /api/pipelines/{id} (includes the spec). */
+export interface PipelineDetail {
+  pipelineId: string;
+  tenantId: string;
+  createdAt: string;
+  specification: PipelineSpec;
+}
+
+/** GET /pipelines/{id} — returns the full spec so the Designer can reload it. */
+export async function getPipelineSpec(id: string, tenantId: string): Promise<PipelineDetail> {
+  return api.get<PipelineDetail>(`/pipelines/${id}?tenantId=${encodeURIComponent(tenantId)}`);
+}
+
+/** PUT /pipelines/{id} — replace name + spec without executing. */
+export async function updatePipeline(
+  id: string,
+  tenantId: string,
+  name: string,
+  spec: PipelineSpec,
+): Promise<PipelineDetail> {
+  return api.put<PipelineDetail>(`/pipelines/${id}?tenantId=${encodeURIComponent(tenantId)}`, {
+    name,
+    specification: spec,
+  });
+}
+
+/** DELETE /pipelines/{id} — returns void (204). */
+export async function deletePipeline(id: string, tenantId: string): Promise<void> {
+  await api.del<void>(`/pipelines/${id}?tenantId=${encodeURIComponent(tenantId)}`);
+}
