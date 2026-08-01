@@ -4,6 +4,7 @@ import {
   Background,
   Controls,
   type Edge,
+  type Connection,
   type Node,
   type NodeChange,
   useReactFlow,
@@ -24,6 +25,7 @@ export function PipelineCanvas() {
   const nodes = usePipelineStore((s) => s.nodes);
   const edges = usePipelineStore((s) => s.edges);
   const onConnect = usePipelineStore((s) => s.onConnect);
+  const onReconnect = usePipelineStore((s) => s.onReconnect);
   const onEdgesDelete = usePipelineStore((s) => s.onEdgesDelete);
   const onNodesDelete = usePipelineStore((s) => s.onNodesDelete);
   const applyNodeChanges = usePipelineStore((s) => s.applyNodeChanges);
@@ -59,6 +61,13 @@ export function PipelineCanvas() {
       onEdgesDelete(deleted.map((e) => e.id));
     },
     [onEdgesDelete],
+  );
+
+  const handleReconnect = useCallback(
+    (oldEdge: Edge, newConnection: Connection) => {
+      onReconnect(oldEdge.id, newConnection);
+    },
+    [onReconnect],
   );
 
   const handleNodesDelete = useCallback(
@@ -98,8 +107,9 @@ export function PipelineCanvas() {
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
-      onConnect={onConnect}
-      onEdgesDelete={handleEdgesDelete}
+        onConnect={onConnect}
+        onReconnect={handleReconnect}
+        onEdgesDelete={handleEdgesDelete}
       onNodesDelete={handleNodesDelete}
       onNodesChange={handleNodesChange}
       onSelectionChange={handleSelectionChange}

@@ -47,6 +47,8 @@ interface PipelineActions {
 
   /** Edge lifecycle (DAG — user-authored). */
   onConnect: (conn: Connection) => void;
+  /** Reconnect an edge's endpoint to a new handle (drag-to-rewire). */
+  onReconnect: (oldEdgeId: string, newConnection: Connection) => void;
   onEdgesDelete: (edgeIds: string[]) => void;
   onNodesDelete: (nodeIds: string[]) => void;
 
@@ -225,6 +227,15 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
 
       const id = `e-${conn.source}-${conn.target}-${Date.now()}`;
       set({ edges: [...edges, { id, source: conn.source, target: conn.target }] });
+    },
+
+    onReconnect: (oldEdgeId, newConnection) => {
+      get()._pushHistory();
+      const { edges } = get();
+      // remove the old edge
+      set({ edges: edges.filter((e) => e.id !== oldEdgeId) });
+      // add the new connection (reuses onConnect's validation: rejects self-loop, duplicate, etc.)
+      get().onConnect(newConnection);
     },
 
     onEdgesDelete: (edgeIds) => {
