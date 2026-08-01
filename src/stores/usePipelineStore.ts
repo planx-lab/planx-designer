@@ -203,8 +203,24 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
       // dag-designer.md §5.5: nodes are draggable. ReactFlow's applyNodeChanges
       // handles position drag, selection, and removal. Source/sink cardinality
       // is enforced at validate/submit time (validateSpec), not here.
-      const updated = rfApplyNodeChanges(changes, get().nodes) as PipelineNode[];
-      set({ nodes: updated });
+      const { nodes, edges } = get();
+      const updated = rfApplyNodeChanges(changes, nodes) as PipelineNode[];
+
+      // Cascade: when a node is removed via ReactFlow's built-in delete
+      // (Backspace/Delete key — goes through applyNodeChanges, NOT removeNode),
+      // drop its edges too, otherwise dangling edges survive and validateSpec
+      // fails with "node not found" + spurious cycles.
+      const removedIds = changes
+        .filter((c) => c.type === 'remove')
+        .map((c) => (c as { id: string }).id);
+      const remainingEdges = removedIds.length === 0
+        ? edges
+        : (() => {
+            const removed = new Set(removedIds);
+            return edges.filter((e) => !removed.has(e.source) && !removed.has(e.target));
+          })();
+
+      set({ nodes: updated, edges: remainingEdges });
     },
 
     onConnect: (conn) => {
