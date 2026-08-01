@@ -1,6 +1,17 @@
 import { Fragment, useState } from 'react';
-import { ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
-import { usePipelines } from '@/hooks/queries';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
+  FolderOpen,
+  Trash2,
+} from 'lucide-react';
+import { usePipelines, getTenant } from '@/hooks/queries';
+import { getPipelineSpec, deletePipeline } from '@/api/controlPlane';
+import { usePipelineStore } from '@/stores/usePipelineStore';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -43,8 +54,37 @@ export function PipelinesPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedExecs, setExpandedExecs] = useState<ExecutionRecord[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const { data, isLoading, error } = usePipelines(page);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const loadSpec = usePipelineStore((s) => s.loadSpec);
+
+  const handleOpen = async (pipelineId: string) => {
+    const tenantId = getTenant();
+    try {
+      const detail = await getPipelineSpec(pipelineId, tenantId);
+      loadSpec(detail.specification, detail.pipelineId);
+      navigate('/'); // Designer is the root route
+    } catch (e) {
+      alert(`Failed to open pipeline: ${e instanceof Error ? e.message : e}`);
+    }
+  };
+
+  const handleDelete = async (pipelineId: string) => {
+    if (!window.confirm('Delete this pipeline? Execution history is kept.')) return;
+    setDeleting(pipelineId);
+    try {
+      const tenantId = getTenant();
+      await deletePipeline(pipelineId, tenantId);
+      await queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+    } catch (e) {
+      alert(`Failed to delete: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const toggleExpand = async (pipelineId: string) => {
     if (expanded === pipelineId) {
@@ -99,19 +139,20 @@ export function PipelinesPage() {
                 <TableHead className="text-xs font-medium text-foreground/50 uppercase tracking-wide px-4 py-2.5">
                   Created
                 </TableHead>
+                <TableHead className="w-px px-3 py-2.5" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={5} className="px-4 py-12 text-center">
+                  <TableCell colSpan={6} className="px-4 py-12 text-center">
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent mx-auto" />
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && pipelines.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="px-4 py-12 text-center text-foreground/30 text-sm">
+                  <TableCell colSpan={6} className="px-4 py-12 text-center text-foreground/30 text-sm">
                     No pipelines yet
                   </TableCell>
                 </TableRow>
@@ -151,11 +192,32 @@ export function PipelinesPage() {
                     <TableCell className="px-4 py-3 text-foreground/50 text-xs whitespace-nowrap">
                       {new Date(p.createdAt).toLocaleString()}
                     </TableCell>
+                    <TableCell className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpen(p.pipelineId)}
+                          className="p-1 rounded text-foreground/60 hover:text-accent hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          title="Open in Designer"
+                          aria-label={`Open pipeline ${p.pipelineId} in Designer`}
+                        >
+                          <FolderOpen size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.pipelineId)}
+                          disabled={deleting === p.pipelineId}
+                          className="p-1 rounded text-foreground/60 hover:text-destructive hover:bg-surface-hover transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          title="Delete pipeline"
+                          aria-label={`Delete pipeline ${p.pipelineId}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                   {/* Expanded row: recent executions */}
                   {expanded === p.pipelineId && (
                     <TableRow key={`${p.pipelineId}-detail`}>
-                      <TableCell colSpan={5} className="bg-muted/30 px-8 py-3">
+                      <TableCell colSpan={6} className="bg-muted/30 px-8 py-3">
                         {loadingDetail ? (
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
                         ) : expandedExecs.length === 0 ? (
