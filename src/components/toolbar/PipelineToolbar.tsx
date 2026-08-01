@@ -36,6 +36,7 @@ export function PipelineToolbar() {
   const submitStatus = useUIStore((s) => s.submitStatus);
   const submitResult = useUIStore((s) => s.submitResult);
   const setSubmitStatus = useUIStore((s) => s.setSubmitStatus);
+  const validationErrors = useUIStore((s) => s.validationErrors);
 
   const [validating, setValidating] = useState(false);
   const [executionStatus, setExecutionStatus] = useState<ExecutionStatus | null>(null);
@@ -66,6 +67,8 @@ export function PipelineToolbar() {
       useUIStore.getState().setValidationErrors(result.errors);
       return;
     }
+    // Spec is valid — clear any stale validation errors from a prior run.
+    useUIStore.getState().setValidationErrors([]);
 
     // Clear any previous run status and polling
     setExecutionStatus(null);
@@ -139,6 +142,7 @@ export function PipelineToolbar() {
   const canSubmit = nodes.length >= 2; // at least source + sink
 
   return (
+    <>
     <header className="h-14 shrink-0 border-b border-border bg-surface flex items-center px-4 gap-3">
       {/* Pipeline name */}
       <input
@@ -295,5 +299,22 @@ export function PipelineToolbar() {
         </div>
       )}
     </header>
+      {/* Validation errors — shown when Validate finds problems or Submit is
+          blocked by an invalid spec. Without this the errors were set in the
+          store but never rendered, so Submit silently did nothing. */}
+      {validationErrors.length > 0 && (
+        <div className="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="flex items-center gap-1 text-xs font-semibold text-destructive shrink-0">
+            <AlertCircle size={13} aria-hidden />
+            {validationErrors.length === 1 ? '1 issue' : `${validationErrors.length} issues`}
+          </span>
+          {validationErrors.map((err, i) => (
+            <span key={i} className="text-xs text-destructive/90">
+              {err}
+            </span>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
