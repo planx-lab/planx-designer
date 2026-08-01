@@ -79,3 +79,76 @@ describe('usePipelineStore — DAG node drag (dag-designer.md §5.5)', () => {
     expect(stored?.position).toEqual({ x: 250, y: 150 });
   });
 });
+
+// ── Canvas state invariants (T4, T9, T12): dangling edges must never survive
+// any load path or node deletion path. These cover the reported "refresh shows
+// stale graph + dangling edges + cycle" bug. ──
+
+describe('canvas state invariants — dangling edges', () => {
+  beforeEach(() => {
+    usePipelineStore.getState().reset('test');
+  });
+
+  it('restoreDraft drops edges referencing missing nodes (heals corrupted localStorage)', () => {
+    usePipelineStore.getState().restoreDraft({
+      name: 'corrupt',
+      tenantId: 't',
+      nodes: [makeNode('src', 'source'), makeNode('snk', 'sink')],
+      edges: [
+        { id: 'e1', source: 'a0901b91-dce9-4bd8-950e-9b7acaffc122', target: 'proc-1' }, // dangling
+        { id: 'e2', source: 'src', target: 'snk' }, // valid
+      ],
+    });
+    const s = usePipelineStore.getState();
+    expect(s.edges).toEqual([{ id: 'e2', source: 'src', target: 'snk' }]);
+  });
+
+  it('loadSpec sanitizes edges from a spec with a dangling reference', () => {
+    usePipelineStore.getState().loadSpec({
+      apiVersion: 'planx/v4',
+      kind: 'Pipeline',
+      metadata: { name: 'x', tenantId: 't' },
+      spec: {
+        nodes: [
+          { id: 'src', kind: 'source', plugin_id: 'p', component_id: 'c' },
+          { id: 'snk', kind: 'sink', plugin_id: 'p', component_id: 'c' },
+        ],
+        edges: [
+          { from: 'src', to: 'ghost' }, // dangling
+          { from: 'src', to: 'snk' }, // valid
+        ],
+      },
+    });
+    const s = usePipelineStore.getState();
+    expect(s.edges.length).toBe(1);
+    expect(s.edges[0].source).toBe('src');
+    expect(s.edges[0].target).toBe('snk');
+  });
+
+  it('applyNodeChanges cascades edge deletion on keyboard remove (T4)', () => {
+    usePipelineStore.setState({
+      nodes: [makeNode('src', 'source'), makeNode('proc', 'processor'), makeNode('snk', 'sink')],
+      edges: [
+        { id: 'e1', source: 'src', target: 'proc' },
+        { id: 'e2', source: 'proc', target: 'snk' },
+      ],
+    });
+    // Simulate ReactFlow Backspace/Delete on the processor node
+    const removeChange = [{ id: 'proc', type: 'remove' as const }];
+    usePipelineStore.getState().applyNodeChanges(removeChange);
+    const s = usePipelineStore.getState();
+    expect(s.nodes.find((n) => n.id === 'proc')).toBeUndefined();
+    // Both edges touching proc must be gone (no dangling)
+    expect(s.edges).toEqual([]);
+  });
+
+  it('validate never reports "node not found" after a delete (T12)', () => {
+    usePipelineStore.setState({
+      nodes: [makeNode('src', 'source'), makeNode('snk', 'sink')],
+      edges: [{ id: 'e1', source: 'src', target: 'snk' }],
+    });
+    const result = usePipelineStore.getState().validate();
+    const hasNodeNotFound = result.errors.some((e) => e.includes('not found'));
+    expect(hasNodeNotFound).toBe(false);
+  });
+});

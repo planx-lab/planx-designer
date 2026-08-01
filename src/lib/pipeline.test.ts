@@ -186,3 +186,28 @@ describe('generateNodeName', () => {
     expect(generateNodeName('processor', ['proc-1', 'proc-2'])).toBe('proc-3');
   });
 });
+
+// ── Dangling-edge defense (T11): buildSpec must never emit a spec with
+// edges referencing non-existent nodes. This is the submit-time guard that
+// makes "node not found" + spurious "cycle" errors impossible. ──
+
+describe('buildSpec — dangling-edge defense', () => {
+  it('drops edges whose source node was deleted', () => {
+    // proc was deleted but an edge still references it (corrupted state)
+    const nodes = [makeNode({ nodeType: 'source', name: 'src' }, 'src'), makeNode({ nodeType: 'sink', name: 'snk' }, 'snk')];
+    const edges = [
+      { id: 'e1', source: 'src', target: 'proc' }, // dangling target 'proc'
+      { id: 'e2', source: 'ghost-uuid', target: 'snk' }, // dangling source
+      { id: 'e3', source: 'src', target: 'snk' }, // valid
+    ];
+    const spec = buildSpec(nodes, edges, { name: 'x', tenantId: 't' });
+    expect(spec.spec.edges).toEqual([{ from: 'src', to: 'snk' }]);
+  });
+
+  it('emits zero edges when all edges are dangling', () => {
+    const nodes = [makeNode({ nodeType: 'source', name: 'src' }, 'src')];
+    const edges = [{ id: 'e1', source: 'a', target: 'b' }];
+    const spec = buildSpec(nodes, edges, { name: 'x', tenantId: 't' });
+    expect(spec.spec.edges).toEqual([]);
+  });
+});
