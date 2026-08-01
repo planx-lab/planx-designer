@@ -16,6 +16,7 @@ import { toYaml } from '@/lib/yaml';
 interface PipelineState {
   name: string;
   tenantId: string;
+  pipelineId: string | null;
   nodes: PipelineNode[];
   edges: Edge[];
   _past: Snapshot[];
@@ -33,6 +34,7 @@ function snapshot(s: PipelineState): Snapshot {
 interface PipelineActions {
   setName: (name: string) => void;
   setTenantId: (id: string) => void;
+  setPipelineId: (id: string | null) => void;
 
   addNode: (type: ComponentKind, pluginId: string, componentId: string, pluginLabel: string) => PipelineNode;
   /** Add a node at a specific canvas position (for drag-from-palette). dag-designer.md §5.2. */
@@ -51,7 +53,7 @@ interface PipelineActions {
   /** Apply ReactFlow node changes (position drag, selection, removal). dag-designer.md §5.5. */
   applyNodeChanges: (changes: NodeChange[]) => void;
 
-  loadSpec: (spec: PipelineSpec) => void;
+  loadSpec: (spec: PipelineSpec, pipelineId?: string | null) => void;
   buildSpec: () => PipelineSpec;
   validate: () => { valid: boolean; errors: string[] };
   toYaml: () => string;
@@ -71,6 +73,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
   (set, get) => ({
     name: '',
     tenantId: '',
+    pipelineId: null,
     nodes: [],
     edges: [],
     _past: [],
@@ -78,6 +81,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
 
     setName: (name) => set({ name }),
     setTenantId: (tenantId) => set({ tenantId }),
+    setPipelineId: (pipelineId) => set({ pipelineId }),
 
     addNode: (type, pluginId, componentId, pluginLabel) => {
       get()._pushHistory();
@@ -255,9 +259,9 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
 
     // ── Spec loading / export ──
 
-    loadSpec: (spec) => {
+    loadSpec: (spec, pipelineId = null) => {
       const { nodes, edges } = fromSpec(spec);
-      set({ name: spec.metadata.name, tenantId: spec.metadata.tenantId, nodes, edges });
+      set({ name: spec.metadata.name, tenantId: spec.metadata.tenantId, nodes, edges, pipelineId, _past: [], _future: [] });
     },
 
     buildSpec: () =>
@@ -269,7 +273,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
       toYaml(get().nodes, get().edges, { name: get().name, tenantId: get().tenantId }),
 
     reset: (tenantId) => {
-      set({ name: '', tenantId, nodes: [], edges: [], _past: [], _future: [] });
+      set({ name: '', tenantId, pipelineId: null, nodes: [], edges: [], _past: [], _future: [] });
     },
 
     restoreDraft: ({ name, tenantId, nodes, edges }) => {
