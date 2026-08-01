@@ -30,7 +30,7 @@ export const PipelineNode = memo(function PipelineNode({
   const removeNode = usePipelineStore((s) => s.removeNode);
   const selectNode = useUIStore((s) => s.selectNode);
 
-  const canDelete = data.nodeType === 'processor';
+  const canDelete = true;
 
   return (
     <div

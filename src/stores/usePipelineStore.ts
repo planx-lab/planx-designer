@@ -160,7 +160,6 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
       const { nodes, edges } = get();
       const target = nodes.find((n) => n.id === id);
       if (!target) return;
-      if (target.data.nodeType === 'source' || target.data.nodeType === 'sink') return;
 
       const updated = nodes.filter((n) => n.id !== id);
       // Cascade: remove all edges connected to the deleted node.
@@ -171,6 +170,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     },
 
     setNodeName: (id, name) => {
+      get()._pushHistory();
       const updated = get().nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, name } } : n,
       );
@@ -178,6 +178,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     },
 
     setComponent: (id, pluginId, componentId, label) => {
+      get()._pushHistory();
       const updated = get().nodes.map((n) =>
         n.id === id
           ? { ...n, data: { ...n.data, pluginId, componentId, pluginLabel: label } }
@@ -187,6 +188,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     },
 
     setConfig: (id, config) => {
+      get()._pushHistory();
       const updated = get().nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, config } } : n,
       );
@@ -197,14 +199,9 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
 
     applyNodeChanges: (changes) => {
       // dag-designer.md §5.5: nodes are draggable. ReactFlow's applyNodeChanges
-      // handles position drag, selection, and removal. We filter out 'remove'
-      // changes for source/sink (cardinality protection in removeNode).
-      const safeChanges = changes.filter((c) => {
-        if (c.type !== 'remove') return true;
-        const node = get().nodes.find((n) => n.id === c.id);
-        return node && node.data.nodeType === 'processor';
-      });
-      const updated = rfApplyNodeChanges(safeChanges, get().nodes) as PipelineNode[];
+      // handles position drag, selection, and removal. Source/sink cardinality
+      // is enforced at validate/submit time (validateSpec), not here.
+      const updated = rfApplyNodeChanges(changes, get().nodes) as PipelineNode[];
       set({ nodes: updated });
     },
 
@@ -240,19 +237,14 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     onNodesDelete: (nodeIds) => {
       if (nodeIds.length === 0) return;
       const { nodes } = get();
-      // Don't allow deleting source or sink
-      const allowed = nodeIds.filter((id) => {
-        const n = nodes.find((nd) => nd.id === id);
-        return n && n.data.nodeType !== 'source' && n.data.nodeType !== 'sink';
-      });
-      if (allowed.length === 0) return;
+      // Source/sink are deletable here; cardinality is enforced at validate/submit.
       get()._pushHistory();
 
-      const remaining = nodes.filter((n) => !allowed.includes(n.id));
+      const remaining = nodes.filter((n) => !nodeIds.includes(n.id));
       // Cascade edges
-      const allowedSet = new Set(allowed);
+      const idSet = new Set(nodeIds);
       const remainingEdges = get().edges.filter(
-        (e) => !allowedSet.has(e.source) && !allowedSet.has(e.target),
+        (e) => !idSet.has(e.source) && !idSet.has(e.target),
       );
       set({ nodes: remaining, edges: remainingEdges });
     },
