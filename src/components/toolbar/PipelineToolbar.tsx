@@ -9,7 +9,9 @@ import {
   Loader2,
   Undo2,
   Redo2,
+  ExternalLink,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
@@ -17,6 +19,7 @@ import { submitPipeline, getExecution } from '@/api/controlPlane';
 import type { ExecutionStatus } from '@/api/controlPlane';
 
 export function PipelineToolbar() {
+  const navigate = useNavigate();
   const name = usePipelineStore((s) => s.name);
   const setName = usePipelineStore((s) => s.setName);
   const tenantId = usePipelineStore((s) => s.tenantId);
@@ -252,6 +255,20 @@ export function PipelineToolbar() {
                 ? 'Succeeded'
                 : `Failed${executionStatus.errorMessage ? ': ' + executionStatus.errorMessage : ''}`}
           </span>
+          {/* Deep-link to the execution in the Operate view (unified-ui-design.md
+              §4.3: bridge Build -> Operate after submit). */}
+          {executionStatus.executionId && (
+            <button
+              type="button"
+              onClick={() => navigate('/executions')}
+              className="flex items-center gap-0.5 text-foreground/50 hover:text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
+              title={`Open execution ${executionStatus.executionId.slice(0, 8)} in Executions`}
+              aria-label="Open execution in Executions view"
+            >
+              View
+              <ExternalLink size={11} aria-hidden />
+            </button>
+          )}
         </div>
       )}
 
