@@ -117,3 +117,37 @@ describe('PipelineToolbar — submit success transitions to saved', () => {
     expect(clearDraft).toBeDefined();
   });
 });
+
+describe('PipelineToolbar — validation error readability', () => {
+  beforeEach(() => {
+    cleanup();
+    useUIStore.getState().setValidationErrors([]);
+    useUIStore.getState().setSubmitStatus('idle');
+    submitPipelineMock.mockReset();
+    getExecutionMock.mockReset();
+  });
+  afterEach(cleanup);
+
+  it('renders the full error text without truncation and in a scrollable region', () => {
+    seedSubmitablePipeline();
+    // A realistic long engine error — the kind the user couldn't read because
+    // it was ellipsized to one line.
+    const longError =
+      'resolution failed: spec validation failed: edge e-src-snk references node snk-1 which was removed; ' +
+      'graph contains a cycle through proc-2 -> proc-3 -> proc-2; source node src-1 is missing required config field "connectionString"';
+    useUIStore.getState().setValidationErrors([longError]);
+
+    renderToolbar();
+
+    // The whole message must be present in the DOM (not sliced).
+    expect(screen.getByText(longError)).toBeInTheDocument();
+
+    // The error region must scroll instead of forcing everything onto one
+    // truncated line. We assert the structural contract: a bounded height +
+    // vertical scroll. (whitespace-nowrap / no max-height is the bug.)
+    const region = screen.getByText('1 issue').parentElement!;
+    expect(region.className).toContain('overflow-y-auto');
+    expect(region.className).toMatch(/max-h-/);
+    expect(region.className).not.toContain('whitespace-nowrap');
+  });
+});

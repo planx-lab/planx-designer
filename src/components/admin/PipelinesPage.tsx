@@ -8,6 +8,8 @@ import {
   ChevronRight as ChevronRightIcon,
   FolderOpen,
   Trash2,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 import { usePipelines, getTenant } from '@/hooks/queries';
 import { getPipelineSpec, deletePipeline } from '@/api/controlPlane';
@@ -56,6 +58,7 @@ export function PipelinesPage() {
   const [expandedExecs, setExpandedExecs] = useState<ExecutionRecord[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { data, isLoading, error } = usePipelines(page);
   const navigate = useNavigate();
@@ -67,9 +70,10 @@ export function PipelinesPage() {
     try {
       const detail = await getPipelineSpec(pipelineId, tenantId);
       loadSpec(detail.specification, detail.pipelineId);
+      setErrorMsg(null);
       navigate('/'); // Designer is the root route
     } catch (e) {
-      alert(`Failed to open pipeline: ${e instanceof Error ? e.message : e}`);
+      setErrorMsg(`Failed to open pipeline: ${e instanceof Error ? e.message : e}`);
     }
   };
 
@@ -80,8 +84,9 @@ export function PipelinesPage() {
       const tenantId = getTenant();
       await deletePipeline(pipelineId, tenantId);
       await queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      setErrorMsg(null);
     } catch (e) {
-      alert(`Failed to delete: ${e instanceof Error ? e.message : e}`);
+      setErrorMsg(`Failed to delete: ${e instanceof Error ? e.message : e}`);
     } finally {
       setDeleting(null);
     }
@@ -122,6 +127,24 @@ export function PipelinesPage() {
 
   return (
     <div className="p-6 space-y-4 h-full overflow-y-auto">
+      {errorMsg && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2"
+        >
+          <AlertCircle size={15} className="text-destructive shrink-0 mt-0.5" aria-hidden />
+          <p className="text-xs text-destructive/90 break-words whitespace-normal flex-1">
+            {errorMsg}
+          </p>
+          <button
+            onClick={() => setErrorMsg(null)}
+            aria-label="Dismiss error"
+            className="text-destructive/60 hover:text-destructive shrink-0 mt-0.5"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       <Card className="bg-surface border-border rounded-lg overflow-hidden">
         <CardContent className="p-0">
           <Table>

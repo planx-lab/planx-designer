@@ -244,13 +244,13 @@ export function PipelineToolbar() {
       {/* Execution status indicator */}
       {executionStatus && (
         <div
-          className={`flex items-center gap-1.5 text-xs whitespace-nowrap ${
-            executionStatus.status === 'succeeded'
-              ? 'text-accent'
-              : executionStatus.status === 'failed'
-                ? 'text-destructive'
+          className={`flex items-start gap-1.5 text-xs max-w-md ${
+            executionStatus.status === 'failed'
+              ? 'text-destructive'
+              : executionStatus.status === 'succeeded'
+                ? 'text-accent'
                 : 'text-warning'
-          }`}
+          } ${executionStatus.status === 'failed' ? 'whitespace-normal break-words' : 'whitespace-nowrap'}`}
         >
           {(executionStatus.status === 'pending' || executionStatus.status === 'running') && (
             <Loader2 size={14} className="animate-spin shrink-0" />
@@ -312,13 +312,13 @@ export function PipelineToolbar() {
           blocked by an invalid spec. Without this the errors were set in the
           store but never rendered, so Submit silently did nothing. */}
       {validationErrors.length > 0 && (
-        <div className="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="shrink-0 max-h-40 overflow-y-auto border-b border-destructive/30 bg-destructive/10 px-4 py-2 flex flex-col gap-1">
           <span className="flex items-center gap-1 text-xs font-semibold text-destructive shrink-0">
             <AlertCircle size={13} aria-hidden />
             {validationErrors.length === 1 ? '1 issue' : `${validationErrors.length} issues`}
           </span>
           {validationErrors.map((err, i) => (
-            <span key={i} className="text-xs text-destructive/90">
+            <span key={i} className="text-xs text-destructive/90 break-words whitespace-normal">
               {err}
             </span>
           ))}
