@@ -149,6 +149,10 @@ export function PipelineToolbar() {
   };
 
   const canSubmit = nodes.length >= 2; // at least source + sink
+  // ADR-016: multi-Sink fan-out. When ≥2 sinks exist, every batch is broadcast
+  // to all sinks; on a sink failure, replay re-delivers to already-succeeded
+  // sinks. Sinks must be idempotent — surface this as a non-blocking warning.
+  const sinkCount = nodes.filter((n) => n.data.nodeType === 'sink').length;
 
   return (
     <>
@@ -308,6 +312,18 @@ export function PipelineToolbar() {
         </div>
       )}
     </header>
+      {/* Multi-Sink idempotency notice (ADR-016 §6). Non-blocking: this is a
+          requirement on Sink authors, not a validation error. Every batch is
+          broadcast to all sinks; on a sink failure, replay re-delivers to
+          already-succeeded sinks, so sinks must tolerate duplicate BatchIDs. */}
+      {sinkCount >= 2 && (
+        <div className="shrink-0 border-b border-warning/30 bg-warning/10 px-4 py-1.5 flex items-center gap-2">
+          <AlertCircle size={13} className="text-warning shrink-0" aria-hidden />
+          <span className="text-xs text-warning/90">
+            Multi-Sink fan-out: every batch is sent to all {sinkCount} sinks. Sinks must be idempotent — on a failure, replay re-delivers the same batch.
+          </span>
+        </div>
+      )}
       {/* Validation errors — shown when Validate finds problems or Submit is
           blocked by an invalid spec. Without this the errors were set in the
           store but never rendered, so Submit silently did nothing. */}

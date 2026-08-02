@@ -151,3 +151,42 @@ describe('PipelineToolbar — validation error readability', () => {
     expect(region.className).not.toContain('whitespace-nowrap');
   });
 });
+
+describe('PipelineToolbar — multi-sink idempotency notice (ADR-016)', () => {
+  beforeEach(() => {
+    cleanup();
+    useUIStore.getState().setValidationErrors([]);
+    useUIStore.getState().setSubmitStatus('idle');
+    submitPipelineMock.mockReset();
+    getExecutionMock.mockReset();
+  });
+  afterEach(cleanup);
+
+  it('shows the idempotency warning when >=2 sinks are on the canvas', () => {
+    usePipelineStore.getState().reset('test');
+    usePipelineStore.setState({
+      nodes: [
+        { id: 'src', type: 'pipelineNode', position: { x: 0, y: 0 }, data: { nodeType: 'source', name: 'src', pluginId: 'p', componentId: 'source', pluginLabel: 'P', config: {}, isValid: true } },
+        { id: 's1', type: 'pipelineNode', position: { x: 0, y: 0 }, data: { nodeType: 'sink', name: 's1', pluginId: 'p', componentId: 'sink', pluginLabel: 'P', config: {}, isValid: true } },
+        { id: 's2', type: 'pipelineNode', position: { x: 0, y: 0 }, data: { nodeType: 'sink', name: 's2', pluginId: 'p', componentId: 'sink', pluginLabel: 'P', config: {}, isValid: true } },
+      ],
+    });
+
+    renderToolbar();
+    expect(screen.getByText(/Multi-Sink fan-out/i)).toBeInTheDocument();
+    expect(screen.getByText(/idempotent/i)).toBeInTheDocument();
+  });
+
+  it('does NOT show the warning for a single sink', () => {
+    usePipelineStore.getState().reset('test');
+    usePipelineStore.setState({
+      nodes: [
+        { id: 'src', type: 'pipelineNode', position: { x: 0, y: 0 }, data: { nodeType: 'source', name: 'src', pluginId: 'p', componentId: 'source', pluginLabel: 'P', config: {}, isValid: true } },
+        { id: 's1', type: 'pipelineNode', position: { x: 0, y: 0 }, data: { nodeType: 'sink', name: 's1', pluginId: 'p', componentId: 'sink', pluginLabel: 'P', config: {}, isValid: true } },
+      ],
+    });
+
+    renderToolbar();
+    expect(screen.queryByText(/Multi-Sink fan-out/i)).not.toBeInTheDocument();
+  });
+});
