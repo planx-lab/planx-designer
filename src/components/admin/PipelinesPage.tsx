@@ -12,6 +12,7 @@ import {
 import { usePipelines, getTenant } from '@/hooks/queries';
 import { getPipelineSpec, deletePipeline } from '@/api/controlPlane';
 import { usePipelineStore } from '@/stores/usePipelineStore';
+import { pipelineDisplayName } from '@/lib/display';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -128,7 +129,7 @@ export function PipelinesPage() {
               <TableRow className="border-border">
                 <TableHead className="w-8 px-4 py-2.5" />
                 <TableHead className="text-xs font-medium text-foreground/50 uppercase tracking-wide px-4 py-2.5">
-                  Pipeline ID
+                  Pipeline
                 </TableHead>
                 <TableHead className="text-xs font-medium text-foreground/50 uppercase tracking-wide px-4 py-2.5">
                   Last Status
@@ -170,7 +171,7 @@ export function PipelinesPage() {
                     role="button"
                     tabIndex={0}
                     aria-expanded={expanded === p.pipelineId}
-                    aria-label={`Pipeline ${p.pipelineId}, ${p.executionCount ?? 0} executions, click to ${expanded === p.pipelineId ? 'collapse' : 'expand'}`}
+                    aria-label={`Pipeline ${pipelineDisplayName(p.name, p.pipelineId)}, ${p.executionCount ?? 0} executions, click to ${expanded === p.pipelineId ? 'collapse' : 'expand'}`}
                     className="border-border/50 hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
                   >
                     <TableCell className="px-4 py-3 w-8">
@@ -180,8 +181,11 @@ export function PipelinesPage() {
                         <ChevronRight size={14} className="text-foreground/50" aria-hidden />
                       )}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-foreground/80 font-medium text-sm font-mono">
-                      {p.pipelineId}
+                    <TableCell
+                      className="px-4 py-3 text-foreground/80 font-medium text-sm"
+                      title={p.pipelineId}
+                    >
+                      {pipelineDisplayName(p.name, p.pipelineId)}
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <StatusBadge status={p.lastStatus} />
@@ -198,7 +202,7 @@ export function PipelinesPage() {
                           onClick={() => handleOpen(p.pipelineId)}
                           className="p-1 rounded text-foreground/60 hover:text-accent hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                           title="Open in Designer"
-                          aria-label={`Open pipeline ${p.pipelineId} in Designer`}
+                          aria-label={`Open pipeline ${pipelineDisplayName(p.name, p.pipelineId)} in Designer`}
                         >
                           <FolderOpen size={14} />
                         </button>
@@ -207,7 +211,7 @@ export function PipelinesPage() {
                           disabled={deleting === p.pipelineId}
                           className="p-1 rounded text-foreground/60 hover:text-destructive hover:bg-surface-hover transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                           title="Delete pipeline"
-                          aria-label={`Delete pipeline ${p.pipelineId}`}
+                          aria-label={`Delete pipeline ${pipelineDisplayName(p.name, p.pipelineId)}`}
                         >
                           <Trash2 size={14} />
                         </button>
