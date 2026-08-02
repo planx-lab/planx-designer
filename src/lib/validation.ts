@@ -29,7 +29,8 @@ export function validateSpec(spec: PipelineSpec): ValidationResult {
     if (n.kind === 'sink') sinks++;
   }
   if (sources !== 1) errors.push(`Exactly 1 source required (got ${sources}).`);
-  if (sinks !== 1) errors.push(`Exactly 1 sink required (got ${sinks}).`);
+  // V-006 (ADR-016): ≥1 sink. Multi-Sink is required broadcast fan-out.
+  if (sinks < 1) errors.push(`At least 1 sink required (got ${sinks}).`);
 
   const inDeg = new Map<string, number>();
   const outDeg = new Map<string, number>();
@@ -84,27 +85,37 @@ function hasCycle(spec: PipelineSpec): boolean {
   return processed !== spec.spec.nodes.length;
 }
 
-/** Forward BFS from source + reverse BFS from sink. Returns an error string if unreachable, else null. */
+/** Forward BFS from source + reverse BFS from the sink SET (ADR-016: ≥1 sink).
+ * A node is reachable-valid if it can reach at least one sink. Returns an error
+ * string if unreachable, else null. */
 function reachabilityErr(spec: PipelineSpec): string | null {
   const source = spec.spec.nodes.find((n) => n.kind === 'source')?.id;
-  const sink = spec.spec.nodes.find((n) => n.kind === 'sink')?.id;
-  if (!source || !sink) return null; // cardinality already flagged
+  const sinkIds = spec.spec.nodes.filter((n) => n.kind === 'sink').map((n) => n.id);
+  if (!source || sinkIds.length === 0) return null; // cardinality already flagged
   const fwd = bfs(source, spec.spec.edges);
   for (const n of spec.spec.nodes) {
     if (n.id !== source && !fwd.has(n.id)) return `Node "${n.id}" is not reachable from source.`;
   }
-  const rev = bfs(sink, spec.spec.edges.map((e) => ({ from: e.to, to: e.from })));
+  const sinkSet = new Set(sinkIds);
+  const rev = bfsMulti(sinkIds, spec.spec.edges.map((e) => ({ from: e.to, to: e.from })));
   for (const n of spec.spec.nodes) {
-    if (n.id !== sink && !rev.has(n.id)) return `Node "${n.id}" cannot reach sink.`;
+    // Sinks trivially reach a sink (themselves); skip them.
+    if (!sinkSet.has(n.id) && !rev.has(n.id)) return `Node "${n.id}" cannot reach sink.`;
   }
   return null;
 }
 
 function bfs(start: string, edges: { from: string; to: string }[]): Set<string> {
+  return bfsMulti([start], edges);
+}
+
+/** Multi-source BFS — seeds from several starts (used for the sink set). */
+function bfsMulti(starts: string[], edges: { from: string; to: string }[]): Set<string> {
   const adj = new Map<string, string[]>();
   for (const e of edges) adj.set(e.from, [...(adj.get(e.from) ?? []), e.to]);
   const seen = new Set<string>();
-  const stack = [start];
+  const stack = [...starts];
+  for (const s of starts) seen.add(s);
   while (stack.length) {
     const n = stack.pop()!;
     for (const to of adj.get(n) ?? []) {

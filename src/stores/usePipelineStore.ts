@@ -118,12 +118,12 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
       let updated = [...nodes];
 
       if (type === 'source') {
+        // Source cardinality stays exactly-1 (V-005, unchanged).
         updated = updated.filter((n) => n.data.nodeType !== 'source');
         updated.unshift(node);
-      } else if (type === 'sink') {
-        updated = updated.filter((n) => n.data.nodeType !== 'sink');
-        updated.push(node);
       } else {
+        // Processor and Sink both append. Sink is ≥1 (ADR-016 multi-sink
+        // fan-out); no longer single-cardinality.
         updated.push(node);
       }
 
@@ -154,12 +154,11 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
       let updated = [...nodes];
 
       if (type === 'source') {
+        // Source cardinality stays exactly-1 (V-005, unchanged).
         updated = updated.filter((n) => n.data.nodeType !== 'source');
         updated.unshift(node);
-      } else if (type === 'sink') {
-        updated = updated.filter((n) => n.data.nodeType !== 'sink');
-        updated.push(node);
       } else {
+        // Processor and Sink both append. Sink is ≥1 (ADR-016).
         updated.push(node);
       }
 

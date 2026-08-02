@@ -152,3 +152,39 @@ describe('canvas state invariants — dangling edges', () => {
     expect(hasNodeNotFound).toBe(false);
   });
 });
+
+// ── Multi-Sink (ADR-016): the canvas must allow ≥1 sink, appending rather
+// than replacing. Source cardinality stays exactly-1 (replace). ──
+
+describe('usePipelineStore — multi-sink (ADR-016)', () => {
+  beforeEach(() => {
+    usePipelineStore.getState().reset('test');
+  });
+
+  it('addNode appends a second sink instead of replacing (fan-out)', () => {
+    const { addNode } = usePipelineStore.getState();
+    addNode('sink', 'sink-stdout', 'sink', 'Stdout', );
+    addNode('sink', 'sink-stdout', 'sink', 'Stdout', );
+
+    const sinks = usePipelineStore.getState().nodes.filter((n) => n.data.nodeType === 'sink');
+    expect(sinks).toHaveLength(2);
+  });
+
+  it('addNodeAt appends a second sink instead of replacing', () => {
+    const { addNodeAt } = usePipelineStore.getState();
+    addNodeAt('sink', 'sink-stdout', 'sink', 'Stdout', 10, 20);
+    addNodeAt('sink', 'sink-stdout', 'sink', 'Stdout', 30, 40);
+
+    const sinks = usePipelineStore.getState().nodes.filter((n) => n.data.nodeType === 'sink');
+    expect(sinks).toHaveLength(2);
+  });
+
+  it('addNode still REPLACES an existing source (cardinality unchanged)', () => {
+    const { addNode } = usePipelineStore.getState();
+    addNode('source', 'source-hello', 'source', 'Hello', );
+    addNode('source', 'source-hello', 'source', 'Hello', );
+
+    const sources = usePipelineStore.getState().nodes.filter((n) => n.data.nodeType === 'source');
+    expect(sources).toHaveLength(1);
+  });
+});
