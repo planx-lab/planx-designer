@@ -17,6 +17,7 @@ import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { submitPipeline, getExecution } from '@/api/controlPlane';
 import type { ExecutionStatus } from '@/api/controlPlane';
+import { clearDraft } from '@/lib/draft';
 
 export function PipelineToolbar() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export function PipelineToolbar() {
   const buildSpec = usePipelineStore((s) => s.buildSpec);
   const validate = usePipelineStore((s) => s.validate);
   const nodes = usePipelineStore((s) => s.nodes);
+  const setPipelineId = usePipelineStore((s) => s.setPipelineId);
 
   const undo = usePipelineStore((s) => s.undo);
   const redo = usePipelineStore((s) => s.redo);
@@ -81,6 +83,14 @@ export function PipelineToolbar() {
     try {
       const spec = buildSpec();
       const response = await submitPipeline(spec, tenantId);
+
+      // The pipeline is now persisted server-side under response.pipelineId.
+      // Record the canonical identity so the editor knows it is editing a saved
+      // entity, and drop the localStorage draft — it only buffered unsaved work
+      // and is now obsolete (leaving it would let a page refresh restore a stale
+      // draft over the just-saved pipeline). (user-scenario-analysis.md R1)
+      setPipelineId(response.pipelineId);
+      clearDraft();
 
       const initialStatus: ExecutionStatus = {
         executionId: response.executionId,

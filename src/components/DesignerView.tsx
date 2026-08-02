@@ -42,10 +42,17 @@ export function DesignerView() {
   // Restore a saved draft only ONCE per session; otherwise init a fresh pipeline.
   // Module-level flag prevents state loss when DesignerView unmounts/remounts
   // (e.g. switching between Designer and Executions views).
+  //
+  // Guard: a draft only represents *unsaved* new work. If the store already
+  // holds a pipeline (e.g. the user opened one from the台账 via loadSpec, or a
+  // previous action populated it), the draft must NOT clobber it — that was the
+  // "打开后状态没更新" bug. (user-scenario-analysis.md R1)
   const restoreDraft = usePipelineStore((s) => s.restoreDraft);
   useEffect(() => {
     if (draftRestored) return;
     draftRestored = true;
+    // Don't restore a draft over an already-loaded pipeline.
+    if (usePipelineStore.getState().nodes.length > 0) return;
     const draft = loadDraft();
     if (draft && draft.nodes.length > 0) {
       restoreDraft({
