@@ -38,7 +38,15 @@ export function buildSpec(
 }
 
 /** Reconstruct React Flow nodes + edges from a DAG PipelineSpec. */
-export function fromSpec(spec: PipelineSpec): { nodes: PipelineNode[]; edges: Edge[] } {
+/** Lookup of plugin id → display metadata, used to resolve human-readable node
+ *  labels when reconstructing the canvas from a spec. Built by the caller from
+ *  the palette store so fromSpec stays a pure function. */
+export type PluginIndex = Map<string, { displayName?: string }>;
+
+export function fromSpec(
+  spec: PipelineSpec,
+  pluginIndex?: PluginIndex,
+): { nodes: PipelineNode[]; edges: Edge[] } {
   // Layout nodes in a vertical column (source at top, processors, sink at bottom)
   // so a loaded pipeline is immediately readable instead of stacked at {0,0}.
   // A simple deterministic layout; the user can drag to refine.
@@ -54,7 +62,9 @@ export function fromSpec(spec: PipelineSpec): { nodes: PipelineNode[]; edges: Ed
       name: ns.id,
       pluginId: ns.plugin_id,
       componentId: ns.component_id,
-      pluginLabel: ns.plugin_id,
+      // Resolve the user-facing label from the plugin's displayName; fall back
+      // to the raw id when the index is absent or doesn't know this plugin.
+      pluginLabel: pluginIndex?.get(ns.plugin_id)?.displayName ?? ns.plugin_id,
       config: ns.config ?? {},
       nodeType: ns.kind as ComponentKind,
       isValid: true,

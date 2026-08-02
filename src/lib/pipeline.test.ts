@@ -111,6 +111,39 @@ describe('fromSpec (DAG)', () => {
     expect(back.edges[1].source).toBe('proc');
     expect(back.edges[1].target).toBe('snk');
   });
+
+  // Canvas nodes must show the plugin's human-readable displayName (e.g.
+  // "PostgreSQL Source"), not its internal id ("postgres"). fromSpec resolves
+  // the label via an optional plugin index supplied by the caller (the palette
+  // store); when absent it falls back to plugin_id so the function stays pure
+  // and testable without a store. (user-scenario-analysis.md P0-3)
+  it('uses pluginIndex to resolve pluginLabel to a displayName', () => {
+    const spec = buildSpec(baseNodes(), baseEdges(), { name: 'p', tenantId: 't' });
+    const index = new Map([
+      ['source-hello', { displayName: 'Hello Source Connector' }],
+      ['sink-stdout', { displayName: 'Stdout Sink' }],
+    ]);
+    const back = fromSpec(spec, index);
+    const src = back.nodes.find((n) => n.data.pluginId === 'source-hello')!;
+    const snk = back.nodes.find((n) => n.data.pluginId === 'sink-stdout')!;
+    expect(src.data.pluginLabel).toBe('Hello Source Connector');
+    expect(snk.data.pluginLabel).toBe('Stdout Sink');
+  });
+
+  it('falls back to plugin_id when no index is provided (no crash, stays pure)', () => {
+    const spec = buildSpec(baseNodes(), baseEdges(), { name: 'p', tenantId: 't' });
+    const back = fromSpec(spec);
+    const src = back.nodes.find((n) => n.data.pluginId === 'source-hello')!;
+    expect(src.data.pluginLabel).toBe('source-hello');
+  });
+
+  it('falls back to plugin_id when the plugin is not in the index', () => {
+    const spec = buildSpec(baseNodes(), baseEdges(), { name: 'p', tenantId: 't' });
+    const index = new Map([['some-other-plugin', { displayName: 'Other' }]]);
+    const back = fromSpec(spec, index);
+    const src = back.nodes.find((n) => n.data.pluginId === 'source-hello')!;
+    expect(src.data.pluginLabel).toBe('source-hello');
+  });
 });
 
 // ── validateSpec (DAG) ───────────────────────────────────

@@ -10,6 +10,7 @@ import {
   generateNodeName,
 } from '@/lib/pipeline';
 import { toYaml } from '@/lib/yaml';
+import { usePaletteStore } from '@/stores/usePaletteStore';
 
 // ── State ────────────────────────────────────────────────
 
@@ -288,7 +289,14 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     // ── Spec loading / export ──
 
     loadSpec: (spec, pipelineId = null) => {
-      const { nodes, edges } = fromSpec(spec);
+      // Resolve human-readable node labels from the loaded plugins so the canvas
+      // shows "PostgreSQL Source" rather than the internal id "postgres". Read
+      // from the palette store lazily (this store action runs after both stores
+      // are initialized); a missing/empty palette just falls back to plugin_id.
+      const pluginIndex = new Map(
+        usePaletteStore.getState().plugins.map((p) => [p.id, { displayName: p.displayName }]),
+      );
+      const { nodes, edges } = fromSpec(spec, pluginIndex);
       const cleanEdges = sanitizeEdges(nodes, edges);
       set({ name: spec.metadata.name, tenantId: spec.metadata.tenantId, nodes, edges: cleanEdges, pipelineId, _past: [], _future: [] });
     },
