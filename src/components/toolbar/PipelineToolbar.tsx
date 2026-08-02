@@ -36,7 +36,6 @@ export function PipelineToolbar() {
   const showPreview = useUIStore((s) => s.showPreview);
   const togglePreview = useUIStore((s) => s.togglePreview);
   const submitStatus = useUIStore((s) => s.submitStatus);
-  const submitResult = useUIStore((s) => s.submitResult);
   const setSubmitStatus = useUIStore((s) => s.setSubmitStatus);
   const validationErrors = useUIStore((s) => s.validationErrors);
 
@@ -236,7 +235,7 @@ export function PipelineToolbar() {
         {submitStatus === 'submitting'
           ? 'Submitting…'
           : submitStatus === 'success'
-            ? `Submitted: ${submitResult?.pipelineId?.slice(0, 8) ?? 'ok'}`
+            ? (name.trim() ? `Submitted · ${name.trim()}` : 'Submitted')
             : submitStatus === 'error'
               ? 'Failed — Retry'
               : 'Submit'}
@@ -276,7 +275,7 @@ export function PipelineToolbar() {
               type="button"
               onClick={() => navigate('/executions')}
               className="flex items-center gap-0.5 text-foreground/50 hover:text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
-              title={`Open execution ${executionStatus.executionId.slice(0, 8)} in Executions`}
+              title="Open this run in Executions"
               aria-label="Open execution in Executions view"
             >
               View

@@ -74,6 +74,26 @@ describe('PipelineToolbar — submit success transitions to saved', () => {
     });
   });
 
+  it('shows a UUID-free confirmation after submit (user sees a status, not an id)', async () => {
+    seedSubmitablePipeline();
+    submitPipelineMock.mockResolvedValue({
+      executionId: 'exec-1',
+      pipelineId: '5f7639fb-10be-4376-ab54-9d2ac0c117f9',
+      status: 'succeeded',
+    });
+
+    renderToolbar();
+    const submitBtn = screen.getByRole('button', { name: /submit/i });
+    fireEvent.click(submitBtn);
+
+    const btn = await screen.findByRole('button', { name: /submitted/i });
+    // The visible label must be a human status. A hex blob like "5f7639fb"
+    // leaking into the button is exactly what the user complained about.
+    expect(btn.textContent).toMatch(/submitted/i);
+    expect(btn.textContent).not.toMatch(/[0-9a-f]{8}-/i);
+    expect(btn.textContent).not.toMatch(/5f7639fb/i);
+  });
+
   it('clears the localStorage draft after a successful submit (draft is obsolete once saved)', async () => {
     seedSubmitablePipeline();
     // Simulate a draft having been buffered during editing.
