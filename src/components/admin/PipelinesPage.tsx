@@ -254,11 +254,13 @@ export function PipelinesPage() {
                             <p className="text-xs text-foreground/40 mb-2 font-medium">Recent executions:</p>
                             {expandedExecs.map((e) => (
                               <div key={e.id} className="flex items-center gap-4 text-xs">
-                                <span className="font-mono text-foreground/40 w-20 truncate">
-                                  {e.id.slice(0, 8)}&hellip;
-                                </span>
                                 <StatusBadge status={e.status} />
-                                <span className="text-foreground/30">{new Date(e.createdAt).toLocaleTimeString()}</span>
+                                <span className="text-foreground/50">{new Date(e.createdAt).toLocaleString()}</span>
+                                {e.error && (
+                                  <span className="text-destructive/70 truncate max-w-[280px]" title={e.error}>
+                                    {e.error}
+                                  </span>
+                                )}
                               </div>
                             ))}
                           </div>

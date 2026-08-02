@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Loader2, Clock } from 'lucide-react';
-import { useExecutions } from '@/hooks/queries';
+import { useExecutions, usePipelineNameIndex } from '@/hooks/queries';
 import type { ExecutionRecord } from '@/types/admin';
+import { pipelineNameResolver } from '@/lib/display';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -61,6 +62,10 @@ export function ExecutionsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ExecutionRecord['status'] | ''>('');
   const { data, isLoading, error } = useExecutions(page, statusFilter);
+  // Resolve pipelineId → human-readable name so the PIPELINE column never shows
+  // a raw UUID. Falls back to a short id slice for unknown/unnamed pipelines.
+  const { data: pipelineIndex } = usePipelineNameIndex();
+  const resolvePipelineName = pipelineNameResolver(pipelineIndex?.pipelines ?? []);
 
   if (error) {
     return (
@@ -104,8 +109,8 @@ export function ExecutionsPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                <TableHead className="text-xs font-medium text-foreground/50 uppercase tracking-wide px-4 py-2.5">
-                  ID
+                <TableHead className="text-xs font-medium text-foreground/50 uppercase tracking-wide px-4 py-2.5 w-10">
+                  #
                 </TableHead>
                 <TableHead className="text-xs font-medium text-foreground/50 uppercase tracking-wide px-4 py-2.5">
                   Pipeline
@@ -139,19 +144,23 @@ export function ExecutionsPage() {
                   </TableCell>
                 </TableRow>
               )}
-              {executions.map((e) => (
+              {executions.map((e, idx) => (
                 <TableRow key={e.id} className="border-border/50 hover:bg-surface-hover">
-                  <TableCell className="px-4 py-2.5 font-mono text-xs text-foreground/50">
-                    {e.id.slice(0, 12)}&hellip;
+                  <TableCell className="px-4 py-2.5 text-xs text-foreground/40" title={e.id}>
+                    #{idx + 1 + (page - 1) * 20}
                   </TableCell>
-                  <TableCell className="px-4 py-2.5 text-foreground/80 text-sm">
-                    {e.pipelineId}
+                  <TableCell className="px-4 py-2.5 text-foreground/80 text-sm font-medium" title={e.pipelineId}>
+                    {resolvePipelineName(e.pipelineId)}
                   </TableCell>
                   <TableCell className="px-4 py-2.5">
                     <StatusBadge status={e.status} />
                   </TableCell>
-                  <TableCell className="px-4 py-2.5 text-xs text-destructive max-w-[200px] truncate" title={e.error}>
-                    {e.error ?? '—'}
+                  <TableCell className="px-4 py-2.5 text-xs text-destructive max-w-[320px]">
+                    {e.error ? (
+                      <span className="break-words whitespace-normal">{e.error}</span>
+                    ) : (
+                      '—'
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-2.5 text-foreground/40 text-xs whitespace-nowrap">
                     {new Date(e.createdAt).toLocaleString()}

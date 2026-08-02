@@ -36,6 +36,18 @@ export function usePipelines(page = 1) {
   });
 }
 
+// Fetch a large page of pipelines (name index) for resolving pipelineId → name
+// on surfaces that only carry an id (e.g. the Executions table's PIPELINE
+// column). Not for paginated display — use usePipelines for that.
+export function usePipelineNameIndex() {
+  return useQuery({
+    queryKey: ['pipelines', getTenant(), 'index'],
+    queryFn: () => fetchPipelines(1, 200),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
+
 // ── Plugins ──
 
 export function usePlugins() {

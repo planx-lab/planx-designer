@@ -10,6 +10,7 @@ import {
   Undo2,
   Redo2,
   ExternalLink,
+  FilePlus2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,6 +29,7 @@ export function PipelineToolbar() {
   const validate = usePipelineStore((s) => s.validate);
   const nodes = usePipelineStore((s) => s.nodes);
   const setPipelineId = usePipelineStore((s) => s.setPipelineId);
+  const reset = usePipelineStore((s) => s.reset);
 
   const undo = usePipelineStore((s) => s.undo);
   const redo = usePipelineStore((s) => s.redo);
@@ -154,9 +156,31 @@ export function PipelineToolbar() {
   // sinks. Sinks must be idempotent — surface this as a non-blocking warning.
   const sinkCount = nodes.filter((n) => n.data.nodeType === 'sink').length;
 
+  // Start a brand-new pipeline: clear any saved draft + the in-memory graph so
+  // the user gets a fresh canvas (not a stale draft from a previous session).
+  // Confirms first if there's unsaved work in progress.
+  const handleNew = () => {
+    if (nodes.length > 0 && !window.confirm('Start a new pipeline? Unsaved changes will be discarded.')) {
+      return;
+    }
+    clearDraft();
+    reset(tenantId || 'default-tenant');
+    useUIStore.getState().setValidationErrors([]);
+    useUIStore.getState().setSubmitStatus('idle');
+  };
+
   return (
     <>
     <header className="h-14 shrink-0 border-b border-border bg-surface flex items-center px-4 gap-3">
+      <button
+        onClick={handleNew}
+        title="New pipeline"
+        aria-label="Start a new pipeline"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-foreground/70 hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <FilePlus2 size={14} aria-hidden />
+        New
+      </button>
       {/* Pipeline name */}
       <input
         type="text"

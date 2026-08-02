@@ -6,6 +6,8 @@
  * the full UUID as primary text.
  */
 
+import type { PipelineSummary } from '@/types/admin';
+
 /** Length of the UUID prefix used as a last-resort label. */
 const UUID_FALLBACK_LEN = 8;
 
@@ -22,4 +24,18 @@ export function pipelineDisplayName(name: string | undefined, id: string | undef
   const i = (id ?? '').trim();
   if (i) return i.slice(0, UUID_FALLBACK_LEN);
   return 'Untitled pipeline';
+}
+
+/**
+ * Build a pipelineId → name lookup from a pipelines list (e.g. for resolving
+ * the PIPELINE column on the Executions page, which only carries pipelineId).
+ * Returns a function; missing/unnamed ids fall back to a short id slice via
+ * pipelineDisplayName so the UUID never appears in full.
+ */
+export function pipelineNameResolver(pipelines: PipelineSummary[]): (pipelineId: string) => string {
+  const byId = new Map<string, string>();
+  for (const p of pipelines) {
+    byId.set(p.pipelineId, (p.name ?? '').trim());
+  }
+  return (pipelineId: string) => pipelineDisplayName(byId.get(pipelineId), pipelineId);
 }
