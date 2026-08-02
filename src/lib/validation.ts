@@ -13,7 +13,7 @@ export function validateSpec(spec: PipelineSpec): ValidationResult {
   if (!spec.metadata.tenantId?.trim()) errors.push('Tenant ID is required.');
   if (spec.apiVersion !== API_VERSION) errors.push(`apiVersion must be ${API_VERSION}.`);
   if (spec.kind !== 'Pipeline') errors.push('kind must be Pipeline.');
-  if (spec.spec.nodes.length < 2) errors.push('Pipeline needs at least 2 nodes (1 source + 1 sink).');
+  if (spec.spec.nodes.length < 2) errors.push('Pipeline needs at least 2 nodes (1 source + at least 1 sink).');
 
   const seen = new Set<string>();
   let sources = 0, sinks = 0;
