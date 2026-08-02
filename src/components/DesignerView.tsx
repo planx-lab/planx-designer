@@ -12,7 +12,7 @@ import { SpecPreview } from '@/components/preview/SpecPreview';
 import { PipelineToolbar } from '@/components/toolbar/PipelineToolbar';
 import { useUIStore } from '@/stores/useUIStore';
 import { useKeyboardShortcuts } from '@/lib/keyboard';
-import { loadDraft, saveDraft } from '@/lib/draft';
+import { loadDraft, saveDraft, shouldSaveDraft } from '@/lib/draft';
 
 /** Module-level flag — restore draft only ONCE per session, not on every mount. */
 let draftRestored = false;
@@ -73,7 +73,10 @@ export function DesignerView() {
     const unsub = usePipelineStore.subscribe((s) => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        if (s.nodes.length > 0) {
+        // Only buffer drafts for unsaved new pipelines. Once persisted
+        // (pipelineId set) the pipeline lives in the台账; a localStorage draft
+        // would be stale and clobber the saved version on refresh.
+        if (shouldSaveDraft(s)) {
           saveDraft({ name: s.name, tenantId: s.tenantId, nodes: s.nodes, edges: s.edges });
         }
       }, 500);
