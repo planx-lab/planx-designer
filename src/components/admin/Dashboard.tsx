@@ -1,6 +1,7 @@
 import { Activity, Zap, Plug, Heart, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { useExecutions, usePipelines, usePlugins, useHealth } from '@/hooks/queries';
+import { useExecutions, usePipelines, usePipelineNameIndex, usePlugins, useHealth } from '@/hooks/queries';
 import type { ExecutionRecord } from '@/types/admin';
+import { pipelineNameResolver } from '@/lib/display';
 import { ExecutionsChart } from '@/components/admin/ExecutionsChart';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -141,6 +142,9 @@ function StatusBadge({ status }: { status: ExecutionRecord['status'] }) {
 
 export function RecentExecutions() {
   const { data, isLoading, error } = useExecutions(1, '');
+  // Resolve pipelineId → name so the Pipeline column shows a name, not a UUID.
+  const { data: pipelineIndex } = usePipelineNameIndex();
+  const resolvePipelineName = pipelineNameResolver(pipelineIndex?.pipelines ?? []);
 
   if (isLoading) {
     return (
@@ -174,8 +178,8 @@ export function RecentExecutions() {
         <Table>
           <TableHeader>
             <TableRow className="border-border">
-              <TableHead className="text-xs font-medium text-foreground/50 px-4 py-2">
-                ID
+              <TableHead className="text-xs font-medium text-foreground/50 px-4 py-2 w-10">
+                #
               </TableHead>
               <TableHead className="text-xs font-medium text-foreground/50 px-4 py-2">
                 Pipeline
@@ -199,16 +203,16 @@ export function RecentExecutions() {
                 </TableCell>
               </TableRow>
             ) : (
-              executions.map((e) => (
+              executions.map((e, idx) => (
                 <TableRow
                   key={e.id}
                   className="border-border/50 hover:bg-surface-hover"
                 >
-                  <TableCell className="px-4 py-2.5 font-mono text-xs text-foreground/50">
-                    {e.id.slice(0, 8)}&hellip;
+                  <TableCell className="px-4 py-2.5 text-xs text-foreground/40" title={e.id}>
+                    #{idx + 1}
                   </TableCell>
-                  <TableCell className="px-4 py-2.5 text-foreground/80 text-sm">
-                    {e.pipelineId}
+                  <TableCell className="px-4 py-2.5 text-foreground/80 text-sm font-medium" title={e.pipelineId}>
+                    {resolvePipelineName(e.pipelineId)}
                   </TableCell>
                   <TableCell className="px-4 py-2.5">
                     <StatusBadge status={e.status} />
