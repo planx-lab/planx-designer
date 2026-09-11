@@ -1,69 +1,58 @@
-# AI Rules — planx-designer (MANDATORY)
+# Planx Designer Agent Rules
 
-## PLANX-DESIGNER-GUARDRAIL
+## Collaboration and references
 
-### ROLE
+Use [workspace guidance](../AGENTS.md) for task completion, authorization and
+proportionate checks. Read relevant clauses of the [canonical contract](../planx-spec/AI_CONTRACT.md),
+[architecture](../planx-spec/planx-architecture.md) and accepted
+[ADR-017](../planx-spec/adr/017-builtin-typed-data-integration.md) when their
+subject changes. Use [repo.lock](repo.lock) for source ownership. Do not reread
+the entire specification for an unrelated edit.
 
-You are a **UI designer only**.
+## Responsibility
 
-You are NOT a runtime architect.
-You are NOT a protocol designer.
-You are NOT a DAG designer.
+Maintain the single React/TypeScript design and monitoring application.
+Communicate with the HTTP control plane; never import workspace Go modules or
+implement the Engine, Resolver, plugin protocol or a browser CEL runtime.
 
-### MUST FOLLOW
+Preserve the accepted Logo, sage/cream palette, configuration navigation and
+wide adjustable data area. Do not restore the retired Admin app or old layout
+variants.
 
-1. `planx-spec/planx-spec.md` — PipelineSpec v4 contract
-2. `repo.lock` — Repository structure
-3. `AI.md` — This file
+## Pipeline and configuration
 
-### CAN MODIFY
+- Author the canonical static DAG specification and preserve declared edges.
+  A linear navigation or bounded preview is not a restriction of the global
+  DAG contract or permission to silently flatten existing topology.
+- Obtain components, roles and configuration descriptions from the single
+  Catalog. Do not hardcode an alternative catalog or per-database runtime.
+- Render component-aware forms using declared schema/capabilities. Local
+  input/draft checks are allowed; backend domain validation remains authoritative.
+- Preserve exact typed values and precision. Do not coerce Int64/Decimal through
+  JavaScript Number or merge missing/NULL/empty states.
+- Keep authoring config free of runtime addresses, sessions and source tokens.
+  Preserve the existing plugin_id/component_id identity pair.
+- Keep unsupported discovery/preview modes explicit; never manufacture success
+  or trigger formal execution to obtain a sample.
 
-- Layout, theme, spacing, icons, typography
-- Form UX, dark mode, responsive behavior
-- Component styling and visual hierarchy
+## Operations
 
-### MUST NEVER MODIFY
+Saving, running, validating, testing a connection, discovering metadata, reading
+samples and checking target compatibility are distinct operations.
 
-- PipelineSpec structure or fields
-- RuntimeExecutor
-- Resolver
-- Plugin Protocol
-- Tenant Model / Project Model
-- Session / gRPC / DAG / Edge / Scheduler
+Bind evidence to tenant, resource/version and relevant configuration. Cancel or
+discard late responses; preserve drafts and do not retain stale results as
+current success. Driver filtering must reflect the component's actual support.
 
-### CURRENT LIMITATION
+Display target commits, source confirmation, recovery conditions and resource
+release separately. Do not invent retry safety or backend capabilities.
 
-Designer supports **linear pipelines only**:
+## Structure and safeguards
 
-```
-Source → Processor[] → Sink
-```
+Keep the existing React, TypeScript, Vite, Tailwind, Zustand, React Flow,
+CodeMirror and shared UI stack. Necessary approved contract changes require
+coordinated backend/consumer work; layout edits cannot change runtime semantics.
 
-- Branching is FORBIDDEN.
-- Merging is FORBIDDEN.
-- Parallelism is FORBIDDEN.
-
-**If UI ideas conflict with Spec, Spec always wins.**
-
----
-
-## Authority Documents
-
-Before working here, read:
-1. `docs/architecture.md` — Architecture truth
-2. `repo.lock` — Structural authority
-3. `planx-spec/planx-spec.md` (workspace root) — PipelineSpec v4
-
-## Hard Constraints
-
-1. Pipeline topology is ALWAYS linear: Source → Processor[] → Sink.
-2. Config is opaque JSON. Never interpret or validate config contents.
-3. Plugin palette must be dynamically fetched from the API. Never hardcode plugin names or config shapes.
-4. Edge connections in React Flow are derived from node ordering. Never allow manual edge editing.
-5. The designer talks ONLY to the Control Plane API over HTTP. Never import Go modules from the workspace.
-6. Every node add/reorder/remove must call `computeEdges()` to sync edges.
-7. The spec is serialized as PipelineSpec v4 (YAML preferred). Never inject runtime fields (paths, session IDs, gRPC addresses).
-
-## Tech Stack (FROZEN)
-
-React 19 + TypeScript + Vite 7 + TailwindCSS v4 + shadcn/ui + Zustand + React Flow (XYFlow) + CodeMirror 6 + Lucide Icons
+Preserve unrelated edits, useful tests and external regression coverage.
+No production access, push/release, remote retirement or new auth/RBAC/billing/
+scheduler infrastructure is authorized by UI or documentation work.
