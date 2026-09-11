@@ -1,0 +1,223 @@
+- complementary:
+  - generic: Planx x
+  - navigation "Primary":
+    - generic: BUILD
+    - button "Designer":
+      - text: Designer
+    - generic: OPERATE
+    - button "Dashboard":
+      - text: Dashboard
+    - button "Executions":
+      - text: Executions
+    - button "Pipelines":
+      - text: Pipelines
+    - button "Plugins":
+      - text: Plugins
+- banner:
+  - heading "Designer" [level=1]
+  - 'status "Engine status: Ready"':
+    - generic: Ready
+  - generic: Tenant
+  - textbox "Tenant ID": reference
+- main:
+  - button "Start a new pipeline":
+    - text: New
+  - textbox "Pipeline name…": builtin-observability-reference
+  - button "Undo" [disabled]:
+  - button "Redo" [disabled]:
+  - button "Validate":
+    - text: Validate
+  - button "Preview":
+    - text: Preview
+  - button "Save":
+    - text: Save
+  - button "Submit":
+    - text: Submit
+  - complementary:
+    - button "Hide palette":
+    - textbox "Filter components…"
+    - button "Sources"
+    - button "Processors"
+    - button "Sinks"
+    - button "json-source HTTP / SOAP builtin":
+      - generic: json-source
+      - generic: HTTP / SOAP
+      - generic: builtin
+    - button "soap-source HTTP / SOAP builtin":
+      - generic: soap-source
+      - generic: HTTP / SOAP
+      - generic: builtin
+    - button "source CSV builtin":
+      - generic: source
+      - generic: CSV
+      - generic: builtin
+    - button "source MySQL builtin":
+      - generic: source
+      - generic: MySQL
+      - generic: builtin
+    - button "source Oracle 10.2+ (unverified subset) builtin":
+      - generic: source
+      - generic: Oracle 10.2+ (unverified subset)
+      - generic: builtin
+    - button "source PostgreSQL builtin":
+      - generic: source
+      - generic: PostgreSQL
+      - generic: builtin
+    - button "source RabbitMQ builtin":
+      - generic: source
+      - generic: RabbitMQ
+      - generic: builtin
+    - button "source SQL Server builtin":
+      - generic: source
+      - generic: SQL Server
+      - generic: builtin
+  - main:
+    - application:
+      - 'button "source node: SQL Server"':
+        - generic: source
+        - button "Delete source node":
+        - paragraph: SQL Server
+        - paragraph: read
+        - generic: Configured
+      - 'button "processor node: Dimension Lookup"':
+        - generic: processor
+        - button "Delete processor node":
+        - paragraph: Dimension Lookup
+        - paragraph: enrich
+        - generic: Configured
+      - 'button "processor node: Typed Records"':
+        - generic: processor
+        - button "Delete processor node":
+        - paragraph: Typed Records
+        - paragraph: map
+        - generic: Configured
+      - 'button "processor node: Typed Records"':
+        - generic: processor
+        - button "Delete processor node":
+        - paragraph: Typed Records
+        - paragraph: validate
+        - generic: Configured
+      - 'button "processor node: Typed Records"':
+        - generic: processor
+        - button "Delete processor node":
+        - paragraph: Typed Records
+        - paragraph: filter
+        - generic: Configured
+      - 'button "sink node: PostgreSQL"':
+        - generic: sink
+        - button "Delete sink node":
+        - paragraph: PostgreSQL
+        - paragraph: write
+        - generic: Configured
+      - generic "Control Panel":
+        - button "Zoom In":
+        - button "Zoom Out":
+        - button "Fit View":
+        - button "Toggle Interactivity":
+  - complementary:
+    - button "Hide config":
+    - generic: sink
+    - heading "PostgreSQL" [level=3]
+    - paragraph: write
+    - generic: Node Name
+    - textbox "Node Name":
+      - /placeholder: e.g. main-source
+      - text: write
+    - generic: Component
+    - combobox "Component":
+      - option "CSV / sink"
+      - option "HTTP / SOAP / sink"
+      - option "MySQL / sink"
+      - option "openGauss (unverified) / sink"
+      - option "PostgreSQL / sink" [selected]
+      - option "RabbitMQ / sink"
+      - option "SQL Server / sink"
+    - generic: Config
+    - button "Raw JSON"
+    - group "Config":
+      - generic "Tenant-scoped Connection resource ID; never an inline DSN.": connection_ref*
+      - combobox "connection_ref*":
+        - option "Select a tenant connection"
+        - option "dimension (postgres)"
+        - option "source (sqlserver)"
+        - option "target (postgres)" [selected]
+      - button "New connection"
+      - button "Edit metadata"
+      - button "Refresh resources"
+      - generic: Version 2
+      - generic "Optional; must match the registered factory.": driver
+      - combobox "driver"
+      - generic "Unquoted table/view or schema.name for reads; table for writes. Identifiers are quoted by the connector.": table*
+      - textbox "table*":
+        - /placeholder: schema.table
+        - text: reference.observability_c75fbb72
+      - button "Discover"
+      - generic "Ordered selected columns; defaults to all source columns or batch schema fields. Selected missing values fail, never become NULL. Unselected insert columns are omitted for database defaults/identity/generated rules; unselected update columns remain unchanged.": columns
+      - textbox "columns":
+        - /placeholder: col1,col2 (at least one required)
+        - text: record_id,tenant_key,dimension_key,amount,occurred_at,nullable_text,empty_text,unicode_text,dimension_label,dimension_version
+      - generic "Public record.Schema; an exact contract, not a coercion rule. Timestamps preserve UTC instants, not original offsets. Decimal and temporal target precision narrowing is rejected before writing; PostgreSQL and MySQL timestamps are limited to microseconds. MySQL unsigned integers use Uint64; TINYINT(1) remains Int64, not Bool; zero dates, TIME, JSON, ENUM and SET require explicit conversion.": schema
+      - textbox "schema"
+      - generic "Default 1000; 1..100000. Maximum rows per delivery or sink transaction.": batch_rows
+      - textbox "batch_rows"
+      - 'generic "Default 16777216; 1..1073741824. Public EstimatedBytes bound per typed batch and conservative converted-parameter bound per write. Sources may retain one additional bounded pending row. Not an RSS limit: drivers may allocate wire values before validation."': max_batch_bytes
+      - textbox "max_batch_bytes"
+      - generic "Default 4194304; 1..1073741824. Bounds each value's public retained-data estimate and raw/text parameter representation. Oversized values or single rows fail; nothing is truncated. Driver wire/encoding allocations are not a process-memory guarantee.": max_value_bytes
+      - textbox "max_value_bytes"
+      - generic "Default 300; 1..3600. Bounds a source cursor lifetime or one sink write.": timeout_seconds
+      - textbox "timeout_seconds"
+      - generic "Default insert. Each batch is one transaction; update requires exactly one match per input row. MySQL targets must use InnoDB. PostgreSQL implements explicit-key upsert; other factories currently implement insert/update only, not upsert. This is an implementation boundary, not a claim that those databases lack upsert.": write_mode
+      - combobox "write_mode"
+      - generic "Required for update/upsert; all keys must be present, non-NULL and selected. Selected non-key values must be present; explicit NULL requires a nullable target. Identity/computed assignments follow native database restrictions; no automatic IDENTITY_INSERT/OVERRIDING, DDL, TRUNCATE or DELETE.": conflict_keys
+      - textbox "conflict_keys": record_id
+    - button "Validate Config":
+      - text: Validate Config
+    - region "Component operations":
+      - button "Test connection"
+      - paragraph: Explicit read-only hook, bounded to 10 seconds. It does not run the pipeline or save Connection metadata.
+      - status: Connected (read-only probe)
+      - generic: Input record.Schema JSON
+      - paragraph: Use the schema received by this component after upstream Mapping/Lookup, not raw Source discovery. This is a static precheck, not source data preview.
+      - textbox "Input record.Schema JSON":
+        - /placeholder: "{\"fields\":[{\"name\":\"amount\",\"kind\":\"decimal\",\"nullable\":true,\"precision\":38,\"scale\":18}]}"
+        - text: "{\"fields\":[{\"name\":\"amount\",\"kind\":\"string\",\"nullable\":true}]}"
+      - button "Check compatibility"
+      - status: Static schema incompatible.
+      - paragraph: "Scope: static_schema"
+      - paragraph: Runtime validation is still required; values and execution have not been verified.
+      - table "Compatibility issues":
+        - rowgroup:
+          - row "Field Code":
+            - columnheader "Field"
+            - columnheader "Code"
+        - rowgroup:
+          - row "record_id missing_column":
+            - cell "record_id"
+            - cell "missing_column"
+          - row "tenant_key missing_column":
+            - cell "tenant_key"
+            - cell "missing_column"
+          - row "dimension_key missing_column":
+            - cell "dimension_key"
+            - cell "missing_column"
+          - row "amount kind_mismatch":
+            - cell "amount"
+            - cell "kind_mismatch"
+          - row "occurred_at missing_column":
+            - cell "occurred_at"
+            - cell "missing_column"
+          - row "nullable_text missing_column":
+            - cell "nullable_text"
+            - cell "missing_column"
+          - row "empty_text missing_column":
+            - cell "empty_text"
+            - cell "missing_column"
+          - row "unicode_text missing_column":
+            - cell "unicode_text"
+            - cell "missing_column"
+          - row "dimension_label missing_column":
+            - cell "dimension_label"
+            - cell "missing_column"
+          - row "dimension_version missing_column":
+            - cell "dimension_version"
+            - cell "missing_column"

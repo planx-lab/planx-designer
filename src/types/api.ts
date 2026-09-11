@@ -7,7 +7,7 @@ export interface CreatePipelineRequest {
   projectId?: string;
 }
 
-/** POST /pipelines response body. */
+/** POST /pipelines/{id}/run response body. Draft creation returns PipelineDetail. */
 export interface CreatePipelineResponse {
   executionId: string;
   pipelineId: string;

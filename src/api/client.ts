@@ -1,4 +1,5 @@
 import { ApiError } from '@/types/api';
+import { parseJson, stringifyJson } from '@/lib/json';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
@@ -21,16 +22,20 @@ async function request<T>(
     return undefined as T;
   }
 
-  return res.json();
+  return parseJson(await res.text()) as T;
 }
 
 export const api = {
   get: request,
-  post<T>(path: string, body: unknown): Promise<T> {
-    return request<T>(path, { method: 'POST', body: JSON.stringify(body) });
+  post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+    return request<T>(path, { method: 'POST', body: stringifyJson(body), ...(signal ? { signal } : {}) });
+  },
+  /** POST with no body — e.g. run an already-stored pipeline by id. */
+  postEmpty<T>(path: string): Promise<T> {
+    return request<T>(path, { method: 'POST' });
   },
   put<T>(path: string, body: unknown): Promise<T> {
-    return request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
+    return request<T>(path, { method: 'PUT', body: stringifyJson(body) });
   },
   del<T>(path: string): Promise<T> {
     return request<T>(path, { method: 'DELETE' });

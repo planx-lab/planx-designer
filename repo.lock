@@ -1,43 +1,45 @@
 PLANX DESIGNER REPOSITORY LOCK
 
-# Authority
-- docs/architecture.md — Architectural truth
-- AI.md — AI behavioral rules
-- README.md — Developer setup
-- planx-spec/planx-spec.md — PipelineSpec v4 contract (workspace root)
+## Authority
 
-# Scope
-React/TypeScript visual designer for Planx 4.0 PipelineSpec v4.
-Produces YAML/JSON specs. Submits to Control Plane API.
-Does NOT execute pipelines.
+../planx-spec/planx-spec.md
+../planx-spec/adr/017-builtin-typed-data-integration.md
+../planx-spec/unified-ui-design.md
+../planx-spec/AI_CONTRACT.md
+AGENTS.md
 
-# Source directories (immutable)
-- src/api/              — Control Plane API client
-- src/components/
-  - canvas/             — React Flow canvas, nodes, auto-layout
-  - palette/            — Dynamic plugin palette (tabbed by type)
-  - editor/             — Config panel + CodeMirror 6 JSON editor
-  - preview/            — YAML/JSON spec preview
-  - toolbar/            — Pipeline toolbar (name, tenant, validate, submit)
-- src/lib/              — Pure utility functions (no React dependency)
-- src/stores/           — Zustand state stores (pipeline, palette, UI)
-- src/types/            — TypeScript type definitions
-- src/styles/           — Global CSS (Tailwind v4 + design tokens)
-- docs/                 — Architecture documentation
+## Scope
 
-# Monorepo rule
-All source code lives in src/. No package splitting or workspace monorepo.
+One React/TypeScript application for pipeline authoring and monitoring.
+Produce canonical PipelineSpec v4 and use the HTTP control plane.
+The browser does not execute a second DAG/CEL runtime.
 
-# Forbidden imports
-- Must NOT import from planx-engine, planx-sdk-*, or planx-plugin-*
-  Go modules. The designer talks ONLY to the Control Plane API.
-- Must NOT import React Flow internal types outside of src/types/node.ts.
+## Source ownership
 
-# Topology constraint
-Pipeline topology is LINEAR: Source → Processor[] → Sink.
-No DAG, no branching, no fan-in/out, no parallel execution.
-This is enforced at three layers: store guards, spec validation, and UI.
+src/api/             HTTP control-plane clients
+src/components/      Workbench, editor, canvas, catalog, monitoring and UI controls
+src/lib/             Frontend utilities
+src/stores/          Draft, catalog, tenant and UI state
+src/types/           Frontend contract types
+src/styles/          Accepted theme and design tokens
+docs/                Useful frontend documentation and evidence
 
-# Config opaqueness
-Plugin config is opaque JSON. The designer never validates or interprets
-config contents beyond JSON syntax checking.
+Keep application source in src/ with the existing structure and required public
+assets/build configuration. Do not split new packages, recreate planx-admin or
+keep a competing production prototype.
+
+## Boundaries
+
+Do not import Go implementation modules or React Flow internal types outside
+the owning frontend types. Consume the existing Catalog and schema/capabilities.
+
+The canonical topology is a static DAG. Preserve its nodes, edges and validation
+rules. A restricted UI operation must report its limit rather than silently
+rewriting or imposing a linear-only runtime contract.
+
+Component-aware forms and local draft validation are permitted. Backend domain
+validation and public typed-data/CEL semantics remain authoritative. Preserve
+exact values, tenant/resource-version scope, secrets and evidence invalidation.
+
+Keep protocol/model changes within explicit ADR-017 approval and synchronized
+consumers. No unrelated runtime or tenant redesign follows from UI work.

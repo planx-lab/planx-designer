@@ -1,5 +1,7 @@
 import type { Edge } from '@xyflow/react';
 import type { PipelineNode } from '@/types/node';
+import { parseJson, stringifyJson } from './json';
+import { isLosslessNumber, toSafeNumberOrThrow } from 'lossless-json';
 
 /**
  * localStorage-backed draft persistence for the Pipeline Designer.
@@ -37,11 +39,24 @@ export function shouldSaveDraft(state: {
 export function saveDraft(draft: Omit<Draft, 'savedAt'>): void {
   try {
     const payload: Draft = { ...draft, savedAt: Date.now() };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+    localStorage.setItem(DRAFT_KEY, stringifyJson(payload));
   } catch {
     // Quota exceeded or storage disabled — silently drop. The draft is
     // best-effort, not a source of truth.
   }
+}
+
+// React Flow layout is authored as JS numbers, unlike opaque node config.
+// Restore its native numeric types without traversing or coercing config.
+function restoreLayoutNumbers(value: unknown): unknown {
+  if (isLosslessNumber(value)) return toSafeNumberOrThrow(value.value);
+  if (Array.isArray(value)) return value.map(restoreLayoutNumbers);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) =>
+      [key, key === 'config' ? item : restoreLayoutNumbers(item)],
+    ));
+  }
+  return value;
 }
 
 /** Load a previously saved draft, or null if none exists. */
@@ -49,8 +64,9 @@ export function loadDraft(): Draft | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Draft;
+    const parsed = parseJson(raw) as Draft;
     if (!parsed.nodes || !Array.isArray(parsed.nodes)) return null;
+    parsed.nodes = restoreLayoutNumbers(parsed.nodes) as PipelineNode[];
     // Backward compat: v2+ drafts always have edges
     return parsed;
   } catch {

@@ -30,8 +30,6 @@ export const PipelineNode = memo(function PipelineNode({
   const removeNode = usePipelineStore((s) => s.removeNode);
   const selectNode = useUIStore((s) => s.selectNode);
 
-  const canDelete = true;
-
   return (
     <div
       onClick={() => selectNode(id)}
@@ -51,19 +49,20 @@ export const PipelineNode = memo(function PipelineNode({
         cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
       `}
     >
-      {/* Handles — per kind constraints: source=output-only, sink=input-only, processor=both */}
+      {/* Handles — per kind constraints: source=output-only, sink=input-only, processor=both.
+          foreground-muted keeps them visible against the dark canvas. */}
       {(data.nodeType === 'sink' || data.nodeType === 'processor') && (
         <Handle
           type="target"
           position={Position.Left}
-          className="!bg-border !w-3 !h-3"
+          className="!bg-foreground-muted !w-3 !h-3"
         />
       )}
       {(data.nodeType === 'source' || data.nodeType === 'processor') && (
         <Handle
           type="source"
           position={Position.Right}
-          className="!bg-border !w-3 !h-3"
+          className="!bg-foreground-muted !w-3 !h-3"
         />
       )}
 
@@ -74,18 +73,16 @@ export const PipelineNode = memo(function PipelineNode({
         >
           {data.nodeType}
         </span>
-        {canDelete && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              removeNode(id);
-            }}
-            aria-label={`Delete ${data.nodeType} node`}
-            className="text-foreground/50 hover:text-destructive transition-colors p-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <Trash2 size={14} />
-          </button>
-        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            removeNode(id);
+          }}
+          aria-label={`Delete ${data.nodeType} node`}
+          className="text-foreground/50 hover:text-destructive transition-colors p-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
 
       {/* Plugin name */}

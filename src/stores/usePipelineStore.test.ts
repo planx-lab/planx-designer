@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { NodeChange } from '@xyflow/react';
 import { usePipelineStore } from './usePipelineStore';
+import { stringifyJson } from '@/lib/json';
 import type { PipelineNode } from '@/types/node';
 
 function makeNode(id: string, type: 'source' | 'processor' | 'sink'): PipelineNode {
@@ -80,16 +81,15 @@ describe('usePipelineStore — DAG node drag (dag-designer.md §5.5)', () => {
   });
 });
 
-// ── Canvas state invariants (T4, T9, T12): dangling edges must never survive
-// any load path or node deletion path. These cover the reported "refresh shows
-// stale graph + dangling edges + cycle" bug. ──
+// Draft loading preserves authored topology. Only explicit node deletion
+// cascades edges; structural errors stay visible and block execution.
 
 describe('canvas state invariants — dangling edges', () => {
   beforeEach(() => {
     usePipelineStore.getState().reset('test');
   });
 
-  it('restoreDraft drops edges referencing missing nodes (heals corrupted localStorage)', () => {
+  it('restoreDraft preserves invalid authored edges for repair', () => {
     usePipelineStore.getState().restoreDraft({
       name: 'corrupt',
       tenantId: 't',
@@ -100,10 +100,11 @@ describe('canvas state invariants — dangling edges', () => {
       ],
     });
     const s = usePipelineStore.getState();
-    expect(s.edges).toEqual([{ id: 'e2', source: 'src', target: 'snk' }]);
+    expect(s.edges).toEqual([{ id: 'e1', source: 'a0901b91-dce9-4bd8-950e-9b7acaffc122', target: 'proc-1' }, { id: 'e2', source: 'src', target: 'snk' }]);
+    expect(s.validate().valid).toBe(false);
   });
 
-  it('loadSpec sanitizes edges from a spec with a dangling reference', () => {
+  it('loadSpec preserves dangling references and blocks execution', () => {
     usePipelineStore.getState().loadSpec({
       apiVersion: 'planx/v4',
       kind: 'Pipeline',
@@ -120,9 +121,8 @@ describe('canvas state invariants — dangling edges', () => {
       },
     });
     const s = usePipelineStore.getState();
-    expect(s.edges.length).toBe(1);
-    expect(s.edges[0].source).toBe('src');
-    expect(s.edges[0].target).toBe('snk');
+    expect(s.edges.map(e => [e.source, e.target])).toEqual([['src', 'ghost'], ['src', 'snk']]);
+    expect(s.validate().valid).toBe(false);
   });
 
   it('applyNodeChanges cascades edge deletion on keyboard remove (T4)', () => {
@@ -186,5 +186,32 @@ describe('usePipelineStore — multi-sink (ADR-016)', () => {
 
     const sources = usePipelineStore.getState().nodes.filter((n) => n.data.nodeType === 'source');
     expect(sources).toHaveLength(1);
+  });
+});
+describe('saved revision ownership', () => {
+  beforeEach(() => usePipelineStore.getState().reset('test'));
+  it('records a saved base without overwriting edits made in flight', () => {
+    const state = usePipelineStore.getState();
+    const submitted = stringifyJson(state.buildSpec());
+    state.setName('newer edit');
+    expect(state.acceptSaved(state.editorId, 'test', 'p1', 'r1', submitted)).toBe(true);
+    expect(usePipelineStore.getState().name).toBe('newer edit');
+    expect(usePipelineStore.getState().savedFingerprint).not.toBe(stringifyJson(usePipelineStore.getState().buildSpec()));
+  });
+  it('ignores a save response belonging to a replaced editor', () => {
+    const previous = usePipelineStore.getState();
+    previous.reset('other');
+    expect(previous.acceptSaved(previous.editorId, 'test', 'p1', 'r1', '{}')).toBe(false);
+    expect(usePipelineStore.getState().pipelineId).toBeNull();
+    expect(usePipelineStore.getState().pipelineRevision).toBeNull();
+  });
+  it('loads the saved revision and clears its identity on restore/reset', () => {
+    const state = usePipelineStore.getState();
+    state.loadSpec(state.buildSpec(), 'p1', 'r1');
+    expect(usePipelineStore.getState().pipelineRevision).toBe('r1');
+    expect(usePipelineStore.getState().savedFingerprint).toBe(stringifyJson(usePipelineStore.getState().buildSpec()));
+    state.restoreDraft({ name: 'local', tenantId: 'test', nodes: [], edges: [] });
+    expect(usePipelineStore.getState().pipelineId).toBeNull();
+    expect(usePipelineStore.getState().pipelineRevision).toBeNull();
   });
 });

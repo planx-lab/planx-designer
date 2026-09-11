@@ -24,6 +24,7 @@ export function fetchExecutions(
   page = 1,
   pageSize = 20,
   statusFilter = '',
+  pipelineId = '',
 ): Promise<ListExecutionsResponse> {
   const params = new URLSearchParams({
     tenantId: tenantId(),
@@ -31,6 +32,10 @@ export function fetchExecutions(
     pageSize: String(pageSize),
   });
   if (statusFilter) params.set('status', statusFilter);
+  // Server-side per-pipeline filter (used by the Pipelines drill-down) —
+  // authoritative across pages, unlike client-side filtering of a single
+  // global page which misses older executions.
+  if (pipelineId) params.set('pipelineId', pipelineId);
   return api.get<ListExecutionsResponse>(`/executions?${params}`);
 }
 

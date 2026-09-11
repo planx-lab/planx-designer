@@ -3,6 +3,7 @@ import { X, Copy, Check, CheckCircle, AlertCircle } from 'lucide-react';
 
 import { usePipelineStore } from '@/stores/usePipelineStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { stringifyJson } from '@/lib/json';
 
 export function SpecPreview() {
   const [activeTab, setActiveTab] = useState<'yaml' | 'json' | 'validation'>('yaml');
@@ -14,7 +15,7 @@ export function SpecPreview() {
   const togglePreview = useUIStore((s) => s.togglePreview);
 
   const yamlStr = toYaml();
-  const jsonStr = JSON.stringify(buildSpec(), null, 2);
+  const jsonStr = stringifyJson(buildSpec(), 2);
   const validationResult = validate();
 
   const content = activeTab === 'yaml' ? yamlStr : jsonStr;

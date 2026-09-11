@@ -9,6 +9,7 @@ import {
   validateSpec,
   generateNodeName,
 } from '@/lib/pipeline';
+import { stringifyJson } from '@/lib/json';
 import { toYaml } from '@/lib/yaml';
 import { usePaletteStore } from '@/stores/usePaletteStore';
 
@@ -18,6 +19,9 @@ interface PipelineState {
   name: string;
   tenantId: string;
   pipelineId: string | null;
+  pipelineRevision: string | null;
+  savedFingerprint: string | null;
+  editorId: number;
   nodes: PipelineNode[];
   edges: Edge[];
   _past: Snapshot[];
@@ -36,6 +40,7 @@ interface PipelineActions {
   setName: (name: string) => void;
   setTenantId: (id: string) => void;
   setPipelineId: (id: string | null) => void;
+  acceptSaved: (editorId: number, tenantId: string, pipelineId: string, revision: string, fingerprint: string) => boolean;
 
   addNode: (type: ComponentKind, pluginId: string, componentId: string, pluginLabel: string) => PipelineNode;
   /** Add a node at a specific canvas position (for drag-from-palette). dag-designer.md §5.2. */
@@ -56,7 +61,7 @@ interface PipelineActions {
   /** Apply ReactFlow node changes (position drag, selection, removal). dag-designer.md §5.5. */
   applyNodeChanges: (changes: NodeChange[]) => void;
 
-  loadSpec: (spec: PipelineSpec, pipelineId?: string | null) => void;
+  loadSpec: (spec: PipelineSpec, pipelineId?: string | null, revision?: string | null) => void;
   buildSpec: () => PipelineSpec;
   validate: () => { valid: boolean; errors: string[] };
   toYaml: () => string;
@@ -70,14 +75,7 @@ interface PipelineActions {
   _sync: (nodes: PipelineNode[]) => void;
 }
 
-// sanitizeEdges drops any edge whose source/target isn't a known node id.
-// This is the invariant guard (Layer 1) that makes dangling edges impossible
-// to survive a load: a corrupted persisted draft (e.g. with stale UUIDs from a
-// deleted node) is healed on restore, so refresh can never re-infect the canvas.
-function sanitizeEdges(nodes: PipelineNode[], edges: Edge[]): Edge[] {
-  const ids = new Set(nodes.map((n) => n.id));
-  return edges.filter((e) => ids.has(e.source) && ids.has(e.target));
-}
+// Draft loading preserves authored edges; only explicit deletion cascades them.
 
 // ── Store ────────────────────────────────────────────────
 
@@ -86,14 +84,28 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
     name: '',
     tenantId: '',
     pipelineId: null,
+    pipelineRevision: null,
+    savedFingerprint: null,
+    editorId: 0,
     nodes: [],
     edges: [],
     _past: [],
     _future: [],
 
     setName: (name) => set({ name }),
-    setTenantId: (tenantId) => set({ tenantId }),
-    setPipelineId: (pipelineId) => set({ pipelineId }),
+    setTenantId: (tenantId) => {
+      if (tenantId !== get().tenantId) set({ tenantId, pipelineId: null, pipelineRevision: null, savedFingerprint: null, editorId: get().editorId + 1 });
+    },
+    setPipelineId: (pipelineId) => {
+      if (pipelineId !== get().pipelineId) set({ pipelineId, pipelineRevision: null, savedFingerprint: null, editorId: get().editorId + 1 });
+    },
+    acceptSaved: (editorId, tenantId, pipelineId, revision, fingerprint) => {
+      if (get().editorId !== editorId || get().tenantId !== tenantId || !pipelineId || !revision) return false;
+      // A late save may advance the saved base, but must not overwrite edits
+      // made while its request was in flight.
+      set({ pipelineId, pipelineRevision: revision, savedFingerprint: fingerprint });
+      return true;
+    },
 
     addNode: (type, pluginId, componentId, pluginLabel) => {
       get()._pushHistory();
@@ -287,7 +299,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
 
     // ── Spec loading / export ──
 
-    loadSpec: (spec, pipelineId = null) => {
+    loadSpec: (spec, pipelineId = null, revision = null) => {
       // Resolve human-readable node labels from the loaded plugins so the canvas
       // shows "PostgreSQL Source" rather than the internal id "postgres". Read
       // from the palette store lazily (this store action runs after both stores
@@ -296,8 +308,12 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
         usePaletteStore.getState().plugins.map((p) => [p.id, { displayName: p.displayName }]),
       );
       const { nodes, edges } = fromSpec(spec, pluginIndex);
-      const cleanEdges = sanitizeEdges(nodes, edges);
-      set({ name: spec.metadata.name, tenantId: spec.metadata.tenantId, nodes, edges: cleanEdges, pipelineId, _past: [], _future: [] });
+      set({
+        name: spec.metadata.name, tenantId: spec.metadata.tenantId, nodes, edges, pipelineId,
+        pipelineRevision: revision,
+        savedFingerprint: pipelineId && revision ? stringifyJson(buildSpec(nodes, edges, spec.metadata)) : null,
+        editorId: get().editorId + 1, _past: [], _future: [],
+      });
     },
 
     buildSpec: () =>
@@ -309,12 +325,11 @@ export const usePipelineStore = create<PipelineState & PipelineActions>(
       toYaml(get().nodes, get().edges, { name: get().name, tenantId: get().tenantId }),
 
     reset: (tenantId) => {
-      set({ name: '', tenantId, pipelineId: null, nodes: [], edges: [], _past: [], _future: [] });
+      set({ name: '', tenantId, pipelineId: null, pipelineRevision: null, savedFingerprint: null, editorId: get().editorId + 1, nodes: [], edges: [], _past: [], _future: [] });
     },
 
     restoreDraft: ({ name, tenantId, nodes, edges }) => {
-      const cleanEdges = sanitizeEdges(nodes, edges ?? []);
-      set({ name, tenantId, nodes, edges: cleanEdges, _past: [], _future: [] });
+      set({ name, tenantId, nodes, edges: edges ?? [], pipelineId: null, pipelineRevision: null, savedFingerprint: null, editorId: get().editorId + 1, _past: [], _future: [] });
     },
 
     // ── Undo / Redo ──

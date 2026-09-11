@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -14,8 +14,8 @@ import {
 import { usePipelines, getTenant } from '@/hooks/queries';
 import { getPipelineSpec, deletePipeline } from '@/api/controlPlane';
 import { usePipelineStore } from '@/stores/usePipelineStore';
-import { pipelineDisplayName } from '@/lib/display';
-import { Badge } from '@/components/ui/badge';
+import { useUIStore } from '@/stores/useUIStore';
+import { pipelineDisplayName, formatDateTime } from '@/lib/display';
 import {
   Table,
   TableHeader,
@@ -27,40 +27,22 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { fetchExecutions } from '@/api/engine';
 import type { ExecutionRecord } from '@/types/admin';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState, ErrorState, TableSkeleton } from '@/components/admin/FeedbackStates';
 
-function StatusBadge({ status }: { status: string }) {
-  switch (status) {
-    case 'SUCCEEDED':
-      return <Badge variant="default">SUCCEEDED</Badge>;
-    case 'RUNNING':
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-warning/15 text-warning border-warning/20"
-        >
-          RUNNING
-        </Badge>
-      );
-    case 'FAILED':
-      return <Badge variant="destructive">FAILED</Badge>;
-    default:
-      return (
-        <Badge variant="outline" className="text-foreground/40 border-foreground/10">
-          {status || '—'}
-        </Badge>
-      );
-  }
-}
+const COL_COUNT = 6;
 
 export function PipelinesPage() {
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedExecs, setExpandedExecs] = useState<ExecutionRecord[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const expandSeq = useRef(0);
 
-  const { data, isLoading, error } = usePipelines(page);
+  const { data, isLoading, error, refetch } = usePipelines(page);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const loadSpec = usePipelineStore((s) => s.loadSpec);
@@ -69,7 +51,12 @@ export function PipelinesPage() {
     const tenantId = getTenant();
     try {
       const detail = await getPipelineSpec(pipelineId, tenantId);
-      loadSpec(detail.specification, detail.pipelineId);
+      loadSpec(detail.specification, detail.pipelineId, detail.revision);
+      // Reset stale submit/save indicators left over from the previous canvas.
+      // Without this, opening pipeline B after submitting pipeline A would keep
+      // showing "Submitted · A" on an unrelated pipeline (I3). Mirrors handleNew.
+      useUIStore.getState().setSubmitStatus('idle');
+      useUIStore.getState().setSaveStatus('idle');
       setErrorMsg(null);
       navigate('/'); // Designer is the root route
     } catch (e) {
@@ -100,23 +87,29 @@ export function PipelinesPage() {
     }
     setExpanded(pipelineId);
     setExpandedExecs([]);
+    setDetailError(null);
     setLoadingDetail(true);
+    // Sequence guard: a slow response for pipeline A must not paint its rows
+    // into pipeline B's detail if the user toggled again mid-flight.
+    const requestToken = ++expandSeq.current;
     try {
-      const execs = await fetchExecutions(1, 5);
-      const filtered = execs.executions
-        ?.filter((e) => e.pipelineId === pipelineId)
-        .slice(0, 5) ?? [];
-      setExpandedExecs(filtered);
+      // Server-side per-pipeline filter (engine supports pipelineId on
+      // GET /executions) — authoritative across pages, unlike the old
+      // client-side filter of one global page which missed older runs.
+      const result = await fetchExecutions(1, 5, '', pipelineId);
+      if (requestToken !== expandSeq.current) return;
+      setExpandedExecs(result.executions ?? []);
     } catch {
-      setExpandedExecs([]);
+      if (requestToken !== expandSeq.current) return;
+      setDetailError('Failed to load executions for this pipeline.');
     }
-    setLoadingDetail(false);
+    if (requestToken === expandSeq.current) setLoadingDetail(false);
   };
 
   if (error) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-destructive text-sm">Failed to load pipelines.</p>
+      <div className="p-6">
+        <ErrorState message="Failed to load pipelines." onRetry={() => refetch()} />
       </div>
     );
   }
@@ -167,17 +160,16 @@ export function PipelinesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={6} className="px-4 py-12 text-center">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent mx-auto" />
-                  </TableCell>
-                </TableRow>
-              )}
+              {isLoading && <TableSkeleton cols={COL_COUNT} />}
               {!isLoading && pipelines.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="px-4 py-12 text-center text-foreground/30 text-sm">
-                    No pipelines yet
+                  <TableCell colSpan={COL_COUNT}>
+                    <EmptyState
+                      title="No pipelines yet"
+                      hint="Pipelines appear here once you submit one from the Designer."
+                      actionTo="/"
+                      actionLabel="Go to Designer"
+                    />
                   </TableCell>
                 </TableRow>
               )}
@@ -213,11 +205,11 @@ export function PipelinesPage() {
                     <TableCell className="px-4 py-3">
                       <StatusBadge status={p.lastStatus} />
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-foreground/60 text-sm">
+                    <TableCell className="px-4 py-3 text-foreground/60 text-sm font-mono tabular-nums">
                       {p.executionCount ?? 0}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-foreground/50 text-xs whitespace-nowrap">
-                      {new Date(p.createdAt).toLocaleString()}
+                    <TableCell className="px-4 py-3 text-foreground/50 text-xs whitespace-nowrap font-mono tabular-nums">
+                      {formatDateTime(p.createdAt)}
                     </TableCell>
                     <TableCell className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
@@ -244,20 +236,25 @@ export function PipelinesPage() {
                   {/* Expanded row: recent executions */}
                   {expanded === p.pipelineId && (
                     <TableRow key={`${p.pipelineId}-detail`}>
-                      <TableCell colSpan={6} className="bg-muted/30 px-8 py-3">
+                      <TableCell colSpan={COL_COUNT} className="bg-muted/30 px-8 py-3">
                         {loadingDetail ? (
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                        ) : detailError ? (
+                          <p className="text-xs text-destructive/90">{detailError}</p>
                         ) : expandedExecs.length === 0 ? (
-                          <p className="text-xs text-foreground/30">No executions</p>
+                          <p className="text-xs text-foreground/40">No executions for this pipeline yet</p>
                         ) : (
                           <div className="space-y-2">
                             <p className="text-xs text-foreground/40 mb-2 font-medium">Recent executions:</p>
                             {expandedExecs.map((e) => (
-                              <div key={e.id} className="flex items-center gap-4 text-xs">
+                              <div key={e.id} className="flex items-start gap-4 text-xs">
                                 <StatusBadge status={e.status} />
-                                <span className="text-foreground/50">{new Date(e.createdAt).toLocaleString()}</span>
+                                <span className="text-foreground/50 whitespace-nowrap pt-0.5 font-mono tabular-nums">{formatDateTime(e.createdAt)}</span>
                                 {e.error && (
-                                  <span className="text-destructive/70 truncate max-w-[280px]" title={e.error}>
+                                  <span
+                                    className="text-destructive/80 break-words whitespace-normal max-h-24 overflow-y-auto flex-1"
+                                    title={e.error}
+                                  >
                                     {e.error}
                                   </span>
                                 )}

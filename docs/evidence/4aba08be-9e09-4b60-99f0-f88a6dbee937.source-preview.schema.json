@@ -1,0 +1,60 @@
+{
+  "fields": [
+    {
+      "name": "record_id",
+      "kind": "int64",
+      "nullable": false,
+      "precision": 0,
+      "scale": 0
+    },
+    {
+      "name": "tenant_key",
+      "kind": "string",
+      "nullable": false,
+      "precision": 0,
+      "scale": 0
+    },
+    {
+      "name": "dimension_key",
+      "kind": "int64",
+      "nullable": false,
+      "precision": 0,
+      "scale": 0
+    },
+    {
+      "name": "amount",
+      "kind": "decimal",
+      "nullable": true,
+      "precision": 38,
+      "scale": 18
+    },
+    {
+      "name": "occurred_at",
+      "kind": "timestamp",
+      "nullable": true,
+      "precision": 0,
+      "scale": 0
+    },
+    {
+      "name": "nullable_text",
+      "kind": "string",
+      "nullable": true,
+      "precision": 0,
+      "scale": 0
+    },
+    {
+      "name": "empty_text",
+      "kind": "string",
+      "nullable": false,
+      "precision": 0,
+      "scale": 0
+    },
+    {
+      "name": "unicode_text",
+      "kind": "string",
+      "nullable": false,
+      "precision": 0,
+      "scale": 0
+    }
+  ]
+}

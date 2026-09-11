@@ -1,0 +1,142 @@
+- complementary:
+  - generic: Planx x
+  - navigation "Primary":
+    - generic: BUILD
+    - button "Designer":
+      - text: Designer
+    - generic: OPERATE
+    - button "Dashboard":
+      - text: Dashboard
+    - button "Executions":
+      - text: Executions
+    - button "Pipelines":
+      - text: Pipelines
+    - button "Plugins":
+      - text: Plugins
+- banner:
+  - heading "Executions" [level=1]
+  - 'status "Engine status: Ready"':
+    - generic: Ready
+  - generic: Tenant
+  - textbox "Tenant ID": reference
+- main:
+  - group "Filter executions by status":
+    - generic: "Filter:"
+    - button "All" [pressed]
+    - button "PENDING"
+    - button "RUNNING"
+    - button "SUCCEEDED"
+    - button "FAILED"
+    - generic: 1 total
+  - table:
+    - rowgroup:
+      - row "# Pipeline Status Error Created Finished":
+        - columnheader
+        - columnheader "#"
+        - columnheader "Pipeline"
+        - columnheader "Status"
+        - columnheader "Error"
+        - columnheader "Created"
+        - columnheader "Finished"
+    - rowgroup:
+      - button "Execution of builtin-ui-reference, SUCCEEDED, click to collapse details" [expanded] [active]:
+        - cell:
+        - cell "#1"
+        - cell "builtin-ui-reference"
+        - cell "SUCCEEDED":
+          - text: SUCCEEDED
+        - cell "—"
+        - cell "9/8/2026, 11:54:16 PM"
+        - cell "9/8/2026, 11:54:16 PM"
+      - 'row "Node statuses: enrich · completed filter · completed map · completed read · completed validate · completed write · completed Execution progress execution dfadaa6e-f42a-40ba-aaad-166a75ff62ea"':
+        - 'cell "Node statuses: enrich · completed filter · completed map · completed read · completed validate · completed write · completed Execution progress execution dfadaa6e-f42a-40ba-aaad-166a75ff62ea"':
+          - paragraph: "Node statuses:"
+          - generic: enrich
+          - generic: ·
+          - generic: completed
+          - generic: filter
+          - generic: ·
+          - generic: completed
+          - generic: map
+          - generic: ·
+          - generic: completed
+          - generic: read
+          - generic: ·
+          - generic: completed
+          - generic: validate
+          - generic: ·
+          - generic: completed
+          - generic: write
+          - generic: ·
+          - generic: completed
+          - region "Execution progress":
+            - paragraph: Execution progress
+            - term: Source deliveries
+            - definition: "3"
+            - term: Source acknowledged deliveries
+            - definition: "3"
+            - term: Unknown source acknowledgements
+            - definition: "0"
+            - term: ACK errors
+            - definition: "0"
+            - term: In-flight batches
+            - definition: "0"
+            - term: In-flight bytes
+            - definition: "0"
+            - table:
+              - rowgroup:
+                - row "Node Input rows Output rows Attempted rows Committed rows Unknown commits":
+                  - columnheader "Node"
+                  - columnheader "Input rows"
+                  - columnheader "Output rows"
+                  - columnheader "Attempted rows"
+                  - columnheader "Committed rows"
+                  - columnheader "Unknown commits"
+              - rowgroup:
+                - row "enrich 8 8 0 0 0":
+                  - cell "enrich"
+                  - cell "8"
+                  - cell "8"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "filter 8 7 0 0 0":
+                  - cell "filter"
+                  - cell "8"
+                  - cell "7"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "map 8 8 0 0 0":
+                  - cell "map"
+                  - cell "8"
+                  - cell "8"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "read 0 8 0 0 0":
+                  - cell "read"
+                  - cell "0"
+                  - cell "8"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "validate 8 8 0 0 0":
+                  - cell "validate"
+                  - cell "8"
+                  - cell "8"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "write 7 0 7 7 0":
+                  - cell "write"
+                  - cell "7"
+                  - cell "0"
+                  - cell "7"
+                  - cell "7"
+                  - cell "0"
+            - paragraph: Source acknowledgements, target commits and local in-flight ownership are independent. ACK errors may include unknown outcomes; zero in-flight does not prove source acknowledgement or target commit.
+          - paragraph: execution dfadaa6e-f42a-40ba-aaad-166a75ff62ea
+  - generic: Page 1 of 1
+  - button "Previous page" [disabled]:
+  - button "Next page" [disabled]:

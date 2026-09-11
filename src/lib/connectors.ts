@@ -11,6 +11,7 @@ export interface PaletteItem {
   componentDisplayName: string;
   kind: ComponentKind;
   description?: string;
+  origin?: PluginInfo['origin'];
 }
 
 /**
@@ -35,6 +36,7 @@ export function groupComponentsByKind(
         componentDisplayName: c.displayName || c.id,
         kind,
         description: c.description || p.description,
+        origin: c.origin ?? p.origin,
       });
     }
   }

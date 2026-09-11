@@ -2,6 +2,7 @@ import { Cpu } from 'lucide-react';
 import { usePlugins } from '@/hooks/queries';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { EmptyState, ErrorState } from '@/components/admin/FeedbackStates';
 import type { PluginInfo, ComponentKind } from '@/types/plugin';
 
 /** Capability badge per component kind. A plugin may ship several components
@@ -51,6 +52,11 @@ function PluginCard({ plugin }: { plugin: PluginInfo }) {
             {Array.from(kinds).map((k) => (
               <KindBadge key={k} kind={k} />
             ))}
+            {plugin.origin && (
+              <Badge variant="secondary" className="bg-surface-hover text-foreground/50 border-border">
+                {plugin.origin}
+              </Badge>
+            )}
             <span className="text-[10px] uppercase tracking-wider text-foreground/40">
               v{plugin.version}
             </span>
@@ -72,12 +78,12 @@ function PluginCard({ plugin }: { plugin: PluginInfo }) {
 // ── PluginsPage ──
 
 export function PluginsPage() {
-  const { data, isLoading, error } = usePlugins();
+  const { data, isLoading, error, refetch } = usePlugins();
 
   if (error) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-destructive text-sm">Failed to load plugins.</p>
+      <div className="p-6">
+        <ErrorState message="Failed to load plugins." onRetry={() => refetch()} />
       </div>
     );
   }
@@ -88,9 +94,11 @@ export function PluginsPage() {
     <div className="p-6 h-full overflow-y-auto">
       {isLoading && <LoadingGrid />}
       {!isLoading && plugins.length === 0 && (
-        <div className="flex items-center justify-center h-full text-foreground/30 text-sm">
-          No plugins loaded
-        </div>
+        <EmptyState
+          icon={Cpu}
+          title="No plugins loaded"
+          hint="Place plugin binaries in the engine's plugin directory and restart it — components will appear here."
+        />
       )}
       {!isLoading && plugins.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,0 +1,418 @@
+[
+  {
+    "amount": {
+      "kind": "decimal",
+      "present": true,
+      "null": false,
+      "data": {
+        "coefficient": "-1",
+        "exponent": -18
+      }
+    },
+    "dimension_key": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740993"
+    },
+    "empty_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "nullable_text": {
+      "kind": "string",
+      "present": true,
+      "null": true
+    },
+    "occurred_at": {
+      "kind": "timestamp",
+      "present": true,
+      "null": false,
+      "data": "2025-12-31T10:00:00Z"
+    },
+    "record_id": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "-9223372036854775808"
+    },
+    "tenant_key": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "tenant_alpha"
+    },
+    "unicode_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "é"
+    }
+  },
+  {
+    "amount": {
+      "kind": "decimal",
+      "present": true,
+      "null": false,
+      "data": {
+        "coefficient": "0",
+        "exponent": -18
+      }
+    },
+    "dimension_key": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740993"
+    },
+    "empty_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "nullable_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "line one\nline two"
+    },
+    "occurred_at": {
+      "kind": "timestamp",
+      "present": true,
+      "null": false,
+      "data": "2026-01-01T11:59:59.999999Z"
+    },
+    "record_id": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "-9007199254740993"
+    },
+    "tenant_key": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "tenant_beta"
+    },
+    "unicode_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "é"
+    }
+  },
+  {
+    "amount": {
+      "kind": "decimal",
+      "present": true,
+      "null": false,
+      "data": {
+        "coefficient": "1",
+        "exponent": -18
+      }
+    },
+    "dimension_key": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740995"
+    },
+    "empty_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "nullable_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "nonempty"
+    },
+    "occurred_at": {
+      "kind": "timestamp",
+      "present": true,
+      "null": false,
+      "data": "2026-11-01T05:30:00Z"
+    },
+    "record_id": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "42"
+    },
+    "tenant_key": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "tenant_alpha"
+    },
+    "unicode_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "東京"
+    }
+  },
+  {
+    "amount": {
+      "kind": "decimal",
+      "present": true,
+      "null": false,
+      "data": {
+        "coefficient": "-12345678901234567890123456789012345678",
+        "exponent": -18
+      }
+    },
+    "dimension_key": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740995"
+    },
+    "empty_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "nullable_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "occurred_at": {
+      "kind": "timestamp",
+      "present": true,
+      "null": false,
+      "data": "2026-11-01T06:30:00Z"
+    },
+    "record_id": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "43"
+    },
+    "tenant_key": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "tenant_alpha"
+    },
+    "unicode_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "🚀"
+    }
+  },
+  {
+    "amount": {
+      "kind": "decimal",
+      "present": true,
+      "null": true
+    },
+    "dimension_key": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740993"
+    },
+    "empty_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "nullable_text": {
+      "kind": "string",
+      "present": true,
+      "null": true
+    },
+    "occurred_at": {
+      "kind": "timestamp",
+      "present": true,
+      "null": true
+    },
+    "record_id": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "44"
+    },
+    "tenant_key": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "tenant_beta"
+    },
+    "unicode_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    }
+  },
+  {
+    "amount": {
+      "kind": "decimal",
+      "present": true,
+      "null": false,
+      "data": {
+        "coefficient": "12345678901234567890123456789012345678",
+        "exponent": -18
+      }
+    },
+    "dimension_key": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740993"
+    },
+    "empty_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "nullable_text": {
+      "kind": "string",
+      "present": true,
+      "null": true
+    },
+    "occurred_at": {
+      "kind": "timestamp",
+      "present": true,
+      "null": false,
+      "data": "2026-09-08T00:30:45.123456Z"
+    },
+    "record_id": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740993"
+    },
+    "tenant_key": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "tenant_alpha"
+    },
+    "unicode_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "中文，café，Δ"
+    }
+  },
+  {
+    "amount": {
+      "kind": "decimal",
+      "present": true,
+      "null": false,
+      "data": {
+        "coefficient": "-99999999999999999999999999999999999999",
+        "exponent": -18
+      }
+    },
+    "dimension_key": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740995"
+    },
+    "empty_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "nullable_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "occurred_at": {
+      "kind": "timestamp",
+      "present": true,
+      "null": false,
+      "data": "2026-03-08T06:59:59.999999Z"
+    },
+    "record_id": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740995"
+    },
+    "tenant_key": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "tenant_alpha"
+    },
+    "unicode_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "naïve 🧪"
+    }
+  },
+  {
+    "amount": {
+      "kind": "decimal",
+      "present": true,
+      "null": false,
+      "data": {
+        "coefficient": "99999999999999999999999999999999999999",
+        "exponent": -18
+      }
+    },
+    "dimension_key": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9007199254740993"
+    },
+    "empty_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": ""
+    },
+    "nullable_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "present"
+    },
+    "occurred_at": {
+      "kind": "timestamp",
+      "present": true,
+      "null": false,
+      "data": "2026-09-08T00:00:00Z"
+    },
+    "record_id": {
+      "kind": "int64",
+      "present": true,
+      "null": false,
+      "data": "9223372036854775807"
+    },
+    "tenant_key": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "tenant_beta"
+    },
+    "unicode_text": {
+      "kind": "string",
+      "present": true,
+      "null": false,
+      "data": "مرحبا"
+    }
+  }
+]

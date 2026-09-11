@@ -1,9 +1,4 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
-import { EditorView, type ViewUpdate } from '@codemirror/view';
-import { basicSetup } from 'codemirror';
-import { json, jsonParseLinter } from '@codemirror/lang-json';
-import { lintGutter, linter } from '@codemirror/lint';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, XCircle, SlidersHorizontal } from 'lucide-react';
 
 import { usePipelineStore } from '@/stores/usePipelineStore';
@@ -12,10 +7,35 @@ import { usePaletteStore } from '@/stores/usePaletteStore';
 import { validateConfig, discoverSchema } from '@/api/controlPlane';
 import type { TableInfo, ColumnInfo } from '@/types/plugin';
 import { SchemaForm } from './SchemaForm';
+import { PluginOperationsPanel } from './PluginOperationsPanel';
+import { SourcePreviewPanel } from './SourcePreviewPanel';
 
-export function ConfigPanel() {
-  const selectedNodeId = useUIStore((s) => s.selectedNodeId);
+// Lazy-load the CodeMirror editor so the (heavy, jsdom-hostile) CodeMirror
+// modules are only fetched when the user actually toggles "Raw JSON". This also
+// keeps CodeMirror out of the eagerly-collected module graph for ConfigPanel's
+// unit tests, which previously hung in jsdom. (JsonEditorField.tsx)
+const JsonEditorField = lazy(() =>
+  import('./JsonEditorField').then((m) => ({ default: m.JsonEditorField })),
+);
+
+type OperationContext = {
+  nodeId: string;
+  tenantId: string;
+  pluginId?: string;
+  componentId?: string;
+  config: Record<string, unknown>;
+};
+
+export function ConfigPanel({ nodeId, showSourcePreview = true, showCompatibility = true, recordSchemaForms = false }: {
+  nodeId?: string;
+  showSourcePreview?: boolean;
+  showCompatibility?: boolean;
+  recordSchemaForms?: boolean;
+} = {}) {
+  const selection = useUIStore((s) => s.selectedNodeId);
+  const selectedNodeId = nodeId ?? selection;
   const nodes = usePipelineStore((s) => s.nodes);
+  const tenantId = usePipelineStore((s) => s.tenantId);
   const setNodeName = usePipelineStore((s) => s.setNodeName);
   const setComponent = usePipelineStore((s) => s.setComponent);
   const setConfig = usePipelineStore((s) => s.setConfig);
@@ -23,6 +43,12 @@ export function ConfigPanel() {
   const plugins = usePaletteStore((s) => s.plugins);
 
   const node = nodes.find((n) => n.id === selectedNodeId);
+
+  const explicitNodeId = useRef(nodeId);
+  explicitNodeId.current = nodeId;
+  const mounted = useRef(false);
+  const discoveryRequest = useRef<OperationContext | null>(null);
+  const validationRequest = useRef<OperationContext | null>(null);
 
   const [showRawJson, setShowRawJson] = useState(false);
   const [validateState, setValidateState] = useState<
@@ -36,71 +62,175 @@ export function ConfigPanel() {
     tables: TableInfo[];
     columns: ColumnInfo[];
     loading: boolean;
+    error?: string;
   }>({ tables: [], columns: [], loading: false });
 
   const pluginId = node?.data?.pluginId;
   const componentId = node?.data?.componentId;
 
-  // Always call useMemo before any early return to preserve hook ordering.
-  const components = useMemo(
-    () => (node ? getItemsByKind()[node.data.nodeType] ?? [] : []),
-    [getItemsByKind, plugins, node?.data?.nodeType],
-  );
+  const components = node ? getItemsByKind()[node.data.nodeType] ?? [] : [];
 
-  // Find the selected component's configSchema from palette plugin data.
-  const configSchema = useMemo(() => {
+  // Use the selected component's schema and server-advertised operation hooks.
+  const selectedComponent = useMemo(() => {
     if (!node?.data?.pluginId) return undefined;
     const plugin = plugins.find((p) => p.id === node.data.pluginId);
     const component = plugin?.components.find(
       (c) => c.id === node.data.componentId,
     );
-    return component?.configSchema;
+    return component;
   }, [plugins, node?.data?.pluginId, node?.data?.componentId]);
 
+  const configSchema = selectedComponent?.configSchema;
+  const discoveryConnectionRef = configSchema?.fields.some(
+    (field) => field.name === 'connection_ref',
+  ) ? node?.data.config.connection_ref : undefined;
+  const declaredDrivers = configSchema?.fields.find(
+    (field) => field.name === 'driver' && field.type === 'ENUM',
+  )?.enumValues ?? [];
+  const configuredDriver = node?.data.config.driver;
+  const connectionDriver = pluginId === 'csv' ? 'file'
+    : declaredDrivers.length === 1 ? declaredDrivers[0]
+      : typeof configuredDriver === 'string' && declaredDrivers.includes(configuredDriver)
+        ? configuredDriver : undefined;
   const hasSchema = configSchema && configSchema.fields.length > 0;
+  const hasKnownEmptySchema = !!selectedComponent && configSchema?.fields.length === 0;
 
-  // Reset validation state when config changes
-  useEffect(() => {
-    setValidateState({ status: 'idle' });
-  }, [node?.data?.config]);
+  const captureContext = useCallback((): OperationContext | null => {
+    const state = usePipelineStore.getState();
+    const currentId = explicitNodeId.current ?? useUIStore.getState().selectedNodeId;
+    const currentNode = state.nodes.find((item) => item.id === currentId);
+    return currentNode ? {
+      nodeId: currentNode.id, tenantId: state.tenantId,
+      pluginId: currentNode.data.pluginId, componentId: currentNode.data.componentId,
+      config: currentNode.data.config,
+    } : null;
+  }, []);
 
-  // Reset discovery state when the selected plugin/component changes.
+  const isCurrentContext = useCallback((expected: OperationContext) => {
+    const current = captureContext();
+    return mounted.current && current !== null
+      && current.nodeId === expected.nodeId && current.tenantId === expected.tenantId
+      && current.pluginId === expected.pluginId && current.componentId === expected.componentId
+      && current.config === expected.config;
+  }, [captureContext]);
+
   useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      discoveryRequest.current = null;
+      validationRequest.current = null;
+    };
+  }, []);
+
+  // A column request captures the committed table edit, so that request survives
+  // this effect. Only obsolete requests lose their loading/error state.
+  useEffect(() => {
+    if (discoveryRequest.current && !isCurrentContext(discoveryRequest.current)) {
+      discoveryRequest.current = null;
+      setDiscovery((prev) => ({ ...prev, loading: false, error: undefined }));
+    }
+    if (validationRequest.current && !isCurrentContext(validationRequest.current)) {
+      validationRequest.current = null;
+      setValidateState({ status: 'idle' });
+    }
+  }, [selectedNodeId, pluginId, componentId, tenantId, node?.data?.config, isCurrentContext]);
+
+  // Declared connection changes also clear raw/history edits before painting stale options.
+  useLayoutEffect(() => {
+    discoveryRequest.current = null;
+    validationRequest.current = null;
     setDiscovery({ tables: [], columns: [], loading: false });
-  }, [pluginId, componentId]);
+    setValidateState({ status: 'idle' });
+  }, [selectedNodeId, pluginId, componentId, tenantId, discoveryConnectionRef]);
+
+  const handleConnectionChange = () => {
+    // Saving managed settings can keep the same resource ID.
+    discoveryRequest.current = null;
+    validationRequest.current = null;
+    setDiscovery({ tables: [], columns: [], loading: false });
+    setValidateState({ status: 'idle' });
+  };
 
   // Discover tables for the current connection config. Triggered by the
   // "Discover Tables" button on the table field.
   const handleDiscoverTables = async () => {
-    if (!node?.data?.pluginId || !node?.data?.componentId) return;
-    setDiscovery((prev) => ({ ...prev, loading: true }));
+    const request = captureContext();
+    if (!request?.pluginId || !request.componentId) return;
+    discoveryRequest.current = request;
+    setDiscovery((prev) => ({ ...prev, loading: true, error: undefined }));
+    const connConfig = { ...request.config };
+    delete connConfig.table;
+    delete connConfig.columns;
     try {
       const result = await discoverSchema(
-        node.data.pluginId,
-        node.data.componentId,
-        node.data.config,
+        request.pluginId,
+        request.componentId,
+        connConfig,
+        request.tenantId,
       );
+      if (discoveryRequest.current !== request || !isCurrentContext(request)) return;
       setDiscovery({ tables: result.tables, columns: [], loading: false });
-    } catch {
-      setDiscovery((prev) => ({ ...prev, loading: false }));
+    } catch (err) {
+      if (discoveryRequest.current !== request || !isCurrentContext(request)) return;
+      setDiscovery((prev) => ({ ...prev, loading: false,
+        error: err instanceof Error ? err.message : 'Discovery request failed',
+      }));
     }
   };
 
   // When the user selects a table, persist it and auto-discover columns.
   const handleTableChange = async (table: string) => {
-    if (!node) return;
-    setConfig(node.id, { ...node.data.config, table });
-    if (!node.data.pluginId || !node.data.componentId) return;
-    const connConfig = { ...node.data.config, table };
+    const before = captureContext();
+    if (!before) return;
+    const connConfig: Record<string, unknown> = { ...before.config, table };
+    delete connConfig.columns;
+    setConfig(before.nodeId, connConfig);
+    // setConfig may replace the object; bind to the actual committed snapshot.
+    const request = captureContext();
+    discoveryRequest.current = request;
+    setDiscovery((prev) => ({ ...prev, columns: [], loading: false, error: undefined }));
+    if (!request?.pluginId || !request.componentId) return;
+    setDiscovery((prev) => ({ ...prev, loading: true }));
     try {
       const result = await discoverSchema(
-        node.data.pluginId,
-        node.data.componentId,
-        connConfig,
+        request.pluginId,
+        request.componentId,
+        request.config,
+        request.tenantId,
       );
-      setDiscovery((prev) => ({ ...prev, columns: result.columns }));
+      if (discoveryRequest.current !== request || !isCurrentContext(request)) return;
+      setDiscovery((prev) => ({ ...prev, columns: result.columns, loading: false }));
+    } catch (err) {
+      if (discoveryRequest.current !== request || !isCurrentContext(request)) return;
+      // Do not reuse another table's columns when discovery fails.
+      setDiscovery((prev) => ({ ...prev, loading: false,
+        error: err instanceof Error ? err.message : 'Discovery request failed',
+      }));
+    }
+  };
+
+  const handleValidateConfig = async () => {
+    const request = captureContext();
+    validationRequest.current = request;
+    if (!request?.pluginId || !request.componentId) {
+      setValidateState({ status: 'error', message: 'Select a component first' });
+      return;
+    }
+    setValidateState({ status: 'loading' });
+    try {
+      const result = await validateConfig(
+        request.pluginId, request.componentId, request.config, request.tenantId,
+      );
+      if (validationRequest.current !== request || !isCurrentContext(request)) return;
+      setValidateState(
+        result.ok
+          ? { status: 'success', message: result.message?.trim() || 'Configuration is valid. This does not test the connection.' }
+          : { status: 'error', message: result.message?.trim() || 'Configuration is invalid.' },
+      );
     } catch {
-      // Keep existing columns on error; the dropdown selection still persisted.
+      if (validationRequest.current !== request || !isCurrentContext(request)) return;
+      setValidateState({ status: 'error', message: 'Validation request failed' });
     }
   };
 
@@ -172,6 +302,11 @@ export function ConfigPanel() {
             }}
             className="w-full bg-muted border border-border h-8 px-2.5 text-xs rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
           >
+            {!components.some((item) => item.pluginId === node.data.pluginId && item.componentId === node.data.componentId) && (
+              <option value={`${node.data.pluginId}/${node.data.componentId}`} disabled>
+                {node.data.pluginLabel || node.data.componentId || node.data.pluginId} (metadata unavailable)
+              </option>
+            )}
             {components.map((item) => (
               <option
                 key={`${item.pluginId}/${item.componentId}`}
@@ -205,7 +340,12 @@ export function ConfigPanel() {
         {hasSchema && !showRawJson ? (
           <div className="rounded-lg border border-border p-4" role="group" aria-labelledby={`config-heading-${node.id}`}>
             <SchemaForm
+              key={`${node.id}:${tenantId}`}
               schema={configSchema}
+              recordSchemaForms={recordSchemaForms}
+              tenantId={tenantId}
+              connectionDriver={connectionDriver}
+              onConnectionChange={handleConnectionChange}
               value={node.data.config}
               onChange={(config) => setConfig(node.id, config)}
               tables={discovery.tables}
@@ -216,29 +356,35 @@ export function ConfigPanel() {
             />
           </div>
         ) : !hasSchema && !showRawJson ? (
-          /* No schema (component takes no declared config). Show a guided
-             empty-state instead of a blank `{}` editor — avoids a "dead end"
-             where the user can't tell whether the emptiness is intended or a
-             bug. Raw JSON remains one toggle away for advanced use. Pattern
-             follows n8n (helpful hint over blank panel) and the empty-state
-             canon (icon + headline + description + action). */
+          /* Only an explicitly empty schema establishes that no config is
+             declared. Missing catalog metadata preserves the node and the
+             raw editor without inventing a configuration conclusion. */
           <div
             className="rounded-lg border border-dashed border-border p-6 flex flex-col items-center text-center"
             role="group"
             aria-labelledby={`config-heading-${node.id}`}
           >
             <SlidersHorizontal size={22} className="text-foreground/30 mb-2" aria-hidden />
-            <p className="text-sm font-medium text-foreground/80">No configuration needed</p>
+            <p className="text-sm font-medium text-foreground/80">{hasKnownEmptySchema ? 'No configuration needed' : 'Configuration schema unavailable'}</p>
             <p className="text-xs text-foreground/45 mt-1 max-w-[28ch]">
-              This component runs as-is. Switch to <span className="text-foreground/70">Raw JSON</span> above if you need to pass advanced config.
+              {hasKnownEmptySchema ? <>This component runs as-is. Switch to <span className="text-foreground/70">Raw JSON</span> above if you need to pass advanced config.</>
+                : 'Existing node values are preserved. Open Component Catalog and use Retry to refresh metadata, or edit Raw JSON.'}
             </p>
           </div>
         ) : (
           <div className="rounded-lg border border-border overflow-hidden" role="group" aria-labelledby={`config-heading-${node.id}`}>
-            <JsonEditorField
-              value={node.data.config}
-              onChange={(config) => setConfig(node.id, config)}
-            />
+            <Suspense fallback={<div className="h-64" />}>
+              <JsonEditorField
+                value={node.data.config}
+                onChange={(config) => setConfig(node.id, config)}
+              />
+            </Suspense>
+          </div>
+        )}
+
+        {discovery.error && (
+          <div role="alert" className="mt-2 text-xs text-destructive break-words whitespace-pre-wrap">
+            Schema discovery failed: {discovery.error}
           </div>
         )}
 
@@ -246,31 +392,8 @@ export function ConfigPanel() {
         <button
           type="button"
           disabled={validateState.status === 'loading'}
-          onClick={async () => {
-            if (!node.data.pluginId || !node.data.componentId) {
-              setValidateState({ status: 'error', message: 'Select a component first' });
-              return;
-            }
-            setValidateState({ status: 'loading' });
-            try {
-              const result = await validateConfig(
-                node.data.pluginId,
-                node.data.componentId,
-                node.data.config,
-              );
-              setValidateState(
-                result.ok
-                  ? { status: 'success', message: result.message }
-                  : { status: 'error', message: result.message },
-              );
-            } catch {
-              setValidateState({
-                status: 'error',
-                message: 'Validation request failed',
-              });
-            }
-          }}
-          className="bg-accent hover:bg-accent/80 text-white rounded-md text-xs px-3 py-1.5 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => void handleValidateConfig()}
+          className="bg-accent hover:bg-accent/80 text-accent-foreground rounded-md text-xs px-3 py-1.5 mt-4 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <CheckCircle className="inline-block w-4 h-4 mr-1.5 -mt-0.5" />
           {validateState.status === 'loading' ? 'Validating...' : 'Validate Config'}
@@ -289,74 +412,17 @@ export function ConfigPanel() {
             <span>{validateState.message}</span>
           </div>
         )}
+        {pluginId && componentId && (
+          <PluginOperationsPanel key={`${node.id}:${tenantId}:${pluginId}:${componentId}`}
+            tenantId={tenantId} pluginId={pluginId} componentId={componentId}
+            config={node.data.config} operations={selectedComponent?.operations} showCompatibility={showCompatibility} />
+        )}
+        {showSourcePreview && pluginId && componentId && selectedComponent?.kind === 'source' && (
+          <SourcePreviewPanel key={`preview:${node.id}:${tenantId}:${pluginId}:${componentId}`}
+            tenantId={tenantId} pluginId={pluginId} componentId={componentId}
+            config={node.data.config} operations={selectedComponent.operations} />
+        )}
       </div>
     </div>
-  );
-}
-
-// ── CodeMirror 6 JSON editor (isolated to avoid unnecessary re-renders) ──
-
-function JsonEditorField({
-  value,
-  onChange,
-}: {
-  value: Record<string, unknown>;
-  onChange: (value: Record<string, unknown>) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
-
-  // Create editor once
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const updateListener = EditorView.updateListener.of((update: ViewUpdate) => {
-      if (update.docChanged) {
-        try {
-          const parsed = JSON.parse(update.state.doc.toString());
-          onChange(parsed);
-        } catch {
-          // Invalid JSON — don't push bad state. The lint plugin
-          // already shows error indicators.
-        }
-      }
-    });
-
-    viewRef.current = new EditorView({
-      doc: JSON.stringify(value, null, 2),
-      extensions: [
-        basicSetup,
-        json(),
-        linter(jsonParseLinter()),
-        lintGutter(),
-        oneDark,
-        updateListener,
-        EditorView.lineWrapping,
-      ],
-      parent: containerRef.current,
-    });
-
-    return () => viewRef.current?.destroy();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Sync external value changes into the editor
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    const current = view.state.doc.toString();
-    const next = JSON.stringify(value, null, 2);
-    if (current !== next) {
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: next },
-      });
-    }
-  }, [value]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="h-64 overflow-auto"
-    />
   );
 }

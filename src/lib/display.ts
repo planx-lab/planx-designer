@@ -39,3 +39,28 @@ export function pipelineNameResolver(pipelines: PipelineSummary[]): (pipelineId:
   }
   return (pipelineId: string) => pipelineDisplayName(byId.get(pipelineId), pipelineId);
 }
+
+// ── Time formatting ──
+// All dates from the API are ISO strings; a malformed/absent value must never
+// render a literal "Invalid Date" into the UI (unified-ui-design.md §4.4:
+// names and numbers the user can read, never raw artifacts).
+
+/** Locale date-time for table cells; '—' for invalid/missing values. */
+export function formatDateTime(dateStr: string | undefined): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+}
+
+/** Compact relative age ("just now", "5m ago", "3h ago"); '—' when invalid. */
+export function formatRelativeTime(dateStr: string | undefined): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '—';
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}

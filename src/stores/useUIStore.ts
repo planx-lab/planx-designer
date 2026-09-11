@@ -14,6 +14,11 @@ interface UIState {
     pipelineId?: string;
     error?: string;
   } | null;
+  /** Save (PUT update) status — independent from submit/run. Used by the "Save"
+   *  button that appears when editing an existing pipeline (pipelineId set),
+   *  so the user can persist edits without minting a new pipeline (F2). */
+  saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  saveError: string | null;
   activeView: ViewId;
   tenantId: string;
 }
@@ -28,6 +33,7 @@ interface UIActions {
     status: UIState['submitStatus'],
     result?: UIState['submitResult'],
   ) => void;
+  setSaveStatus: (status: UIState['saveStatus'], error?: string | null) => void;
   setActiveView: (v: ViewId) => void;
   setTenantId: (t: string) => void;
 }
@@ -39,6 +45,8 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   validationErrors: [],
   submitStatus: 'idle',
   submitResult: null,
+  saveStatus: 'idle',
+  saveError: null,
   activeView: 'designer',
   tenantId: getTenant(),
 
@@ -50,6 +58,8 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   setValidationErrors: (errors) => set({ validationErrors: errors }),
   setSubmitStatus: (status, result) =>
     set({ submitStatus: status, submitResult: result ?? null }),
+  setSaveStatus: (status, error = null) =>
+    set({ saveStatus: status, saveError: error }),
   setActiveView: (v) => set({ activeView: v }),
   setTenantId: (t) => {
     setTenant(t);

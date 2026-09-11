@@ -1,4 +1,5 @@
 // ── Admin API types (from planx-admin) ──
+import type { ExecutionProgress } from './progress';
 
 // ── Execution ──
 
@@ -10,6 +11,9 @@ export interface ExecutionRecord {
   error?: string;
   createdAt: string;
   finishedAt?: string;
+  progress?: ExecutionProgress | null;
+  /** Per-node lifecycle statuses, present when the engine emitted them. */
+  nodeStatuses?: Record<string, { nodeId: string; status: string; error?: string }>;
 }
 
 export interface ListExecutionsResponse {
@@ -66,5 +70,7 @@ export interface ListPluginsResponse {
 
 export interface HealthResponse {
   status: 'ok' | 'degraded';
+  pipelineWorkflow?: string;
+  connectionWorkflow?: string;
   error?: string;
 }

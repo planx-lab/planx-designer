@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   Workflow,
@@ -43,6 +43,11 @@ const NAV_GROUPS: NavGroup[] = [
 
 const ALL_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 
+/** Human label for a ViewId (topbar title + document.title). */
+function viewLabel(id: ViewId): string {
+  return ALL_ITEMS.find((n) => n.id === id)?.label ?? 'Designer';
+}
+
 /** Map the URL pathname to a ViewId (default: designer). */
 function pathnameToView(pathname: string): ViewId {
   const seg = pathname.replace(/^\//, '').split('/')[0];
@@ -82,15 +87,17 @@ function TenantInput() {
 function Sidebar({
   activeView,
   onNavigate,
+  compact,
 }: {
   activeView: ViewId;
   onNavigate: (v: ViewId) => void;
+  compact: boolean;
 }) {
   return (
     <nav className="flex flex-col gap-4 p-3" aria-label="Primary">
       {NAV_GROUPS.map((group) => (
         <div key={group.label} className="flex flex-col gap-0.5">
-          <span className="px-2 pb-1 text-[10px] font-semibold tracking-wider text-foreground/40">
+          <span className={`px-2 pb-1 text-[10px] font-semibold tracking-wider text-foreground/50 ${compact ? 'md:sr-only' : ''}`}>
             {group.label}
           </span>
           {group.items.map(({ id, label, icon: Icon }) => {
@@ -100,14 +107,15 @@ function Sidebar({
                 key={id}
                 onClick={() => onNavigate(id)}
                 aria-current={active ? 'page' : undefined}
-                className={`flex items-center gap-2 px-2 py-1.5 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                title={label}
+                className={`flex items-center gap-2 px-2 py-2.5 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${compact ? 'md:justify-center' : ''} ${
                   active
                     ? 'bg-accent/15 text-accent'
                     : 'text-foreground/70 hover:text-foreground hover:bg-surface-hover'
                 }`}
               >
                 <Icon size={16} aria-hidden />
-                {label}
+                <span className={compact ? 'md:sr-only' : ''}>{label}</span>
               </button>
             );
           })}
@@ -128,17 +136,24 @@ export function App() {
     setSidebarOpen(false);
   };
 
+  // Keep the tab title in sync with the active view — browser history/tabs
+  // otherwise say "Planx Designer" regardless of where the user is.
+  useEffect(() => {
+    document.title = `${viewLabel(activeView)} · Planx`;
+  }, [activeView]);
+
   return (
-    <div className="h-screen flex bg-background text-foreground">
+    <div className="planx-shell h-dvh flex bg-background text-foreground">
       {/* Sidebar — fixed left rail on md+, slide-over on mobile. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-56 shrink-0 border-r border-border bg-surface transform transition-transform duration-200 md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-56 shrink-0 border-r border-border bg-surface transform transition-transform duration-200 md:static md:translate-x-0 ${activeView === 'designer' ? 'md:w-16' : 'md:w-48'} ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex h-12 items-center justify-between px-4 border-b border-border">
-          <span className="font-mono font-semibold text-sm text-foreground">
-            Planx <span className="text-accent">x</span>
+          <span className="planx-brand" aria-label="planx">
+            <span className="planx-brand-mark" aria-hidden="true" />
+            <span className={activeView === 'designer' ? 'md:hidden' : ''}>planx</span>
           </span>
           <button
             className="md:hidden text-foreground/60 hover:text-foreground"
@@ -148,7 +163,7 @@ export function App() {
             <X size={16} />
           </button>
         </div>
-        <Sidebar activeView={activeView} onNavigate={setActiveView} />
+        <Sidebar activeView={activeView} onNavigate={setActiveView} compact={activeView === 'designer'} />
       </aside>
 
       {/* Mobile sidebar backdrop */}
@@ -172,7 +187,14 @@ export function App() {
             <Menu size={18} />
           </button>
 
-          <div className="flex-1" />
+          <div className="flex-1 min-w-0 flex items-center gap-4">
+            {activeView === 'designer' && <span className="planx-brand hidden md:inline-flex">planx</span>}
+            {/* Current view title — orients the user ("which page am I on?")
+                without adding a per-page heading. */}
+            <h1 className="font-heading text-sm font-medium text-foreground/80 truncate">
+              {viewLabel(activeView)}
+            </h1>
+          </div>
 
           <StatusIndicator />
           <div className="w-px h-5 bg-border" />

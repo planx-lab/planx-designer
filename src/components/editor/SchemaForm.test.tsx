@@ -3,6 +3,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { SchemaForm } from './SchemaForm';
 import type { ConfigSchema } from '@/types/plugin';
 import '@testing-library/jest-dom/vitest';
+import { stringify } from 'lossless-json';
 
 afterEach(cleanup);
 
@@ -26,15 +27,16 @@ describe('SchemaForm — field rendering', () => {
     expect(input.type).toBe('text');
   });
 
-  it('renders an INTEGER field as <input type="number">', () => {
+  it('renders an INTEGER field as an exact text input with a numeric keyboard hint', () => {
     const schema = makeSchema([
       { name: 'port', type: 'INTEGER' },
     ]);
     render(<SchemaForm schema={schema} value={{}} onChange={() => {}} />);
 
-    const input = screen.getByRole('spinbutton') as HTMLInputElement;
+    const input = screen.getByLabelText('port') as HTMLInputElement;
     expect(input).toBeInTheDocument();
-    expect(input.type).toBe('number');
+    expect(input.type).toBe('text');
+    expect(input.inputMode).toBe('numeric');
   });
 
   it('renders a BOOLEAN field as <input type="checkbox">', () => {
@@ -68,9 +70,10 @@ describe('SchemaForm — field rendering', () => {
     const select = screen.getByLabelText('Mode') as HTMLSelectElement;
     expect(select).toBeInTheDocument();
     expect(select.tagName).toBe('SELECT');
-    expect(select.options).toHaveLength(2);
-    expect(select.options[0].value).toBe('fast');
-    expect(select.options[1].value).toBe('safe');
+    expect(select.options).toHaveLength(3);
+    expect(select.options[0].value).toBe('');
+    expect(select.options[1].value).toBe('fast');
+    expect(select.options[2].value).toBe('safe');
   });
 });
 
@@ -193,6 +196,53 @@ describe('SchemaForm — required, defaults, and placeholder', () => {
   });
 });
 
+describe('SchemaForm exact values and initial discovery', () => {
+  it.each([
+    ['INTEGER', '9007199254740993'],
+    ['INTEGER', '-9223372036854775808'],
+    ['INTEGER', '18446744073709551615'],
+    ['NUMBER', '123456789.123456789012345678900'],
+    ['NUMBER', '1.2300e-500'],
+  ] as const)('keeps %s literal %s exact', (type, literal) => {
+    const onChange = vi.fn();
+    render(<SchemaForm schema={makeSchema([{ name: 'value', type }])} value={{}} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('value'), { target: { value: literal } });
+    expect(stringify(onChange.mock.calls.at(-1)?.[0])).toBe(`{"value":${literal}}`);
+  });
+
+  it('keeps an explicitly string-typed decimal as a string', () => {
+    const onChange = vi.fn();
+    render(<SchemaForm schema={makeSchema([{ name: 'value', type: 'STRING' }])} value={{}} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('value'), { target: { value: '12.3400' } });
+    expect(onChange).toHaveBeenCalledWith({ value: '12.3400' });
+  });
+
+  it('clearing a numeric field removes it instead of writing zero', () => {
+    const onChange = vi.fn();
+    render(<SchemaForm schema={makeSchema([{ name: 'value', type: 'INTEGER' }])} value={{ value: 7, keep: true }} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('value'), { target: { value: '' } });
+    expect(onChange).toHaveBeenCalledWith({ keep: true });
+  });
+
+  it('allows a negative-number draft without committing invalid numeric config', () => {
+    const onChange = vi.fn();
+    render(<SchemaForm schema={makeSchema([{ name: 'value', type: 'INTEGER' }])} value={{}} onChange={onChange} />);
+    const input = screen.getByLabelText('value');
+    fireEvent.change(input, { target: { value: '-' } });
+    expect(input).toHaveValue('-');
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: '-9007199254740993' } });
+    expect(stringify(onChange.mock.calls[0][0])).toBe('{"value":-9007199254740993}');
+  });
+
+  it('offers discovery before any tables have been fetched', () => {
+    const onDiscover = vi.fn();
+    render(<SchemaForm schema={makeSchema([{ name: 'table', type: 'STRING' }])} value={{}} onChange={() => {}} tables={[]} onDiscoverTables={onDiscover} />);
+    fireEvent.click(screen.getByRole('button', { name: /^discover$/i }));
+    expect(onDiscover).toHaveBeenCalledOnce();
+  });
+});
+
 // ── Empty schema ─────────────────────────────────────────────────────
 
 describe('SchemaForm — empty schema', () => {
@@ -224,9 +274,11 @@ describe('SchemaForm — table dropdown discovery', () => {
     // rather than a text input.
     const select = screen.getByLabelText('Table') as HTMLSelectElement;
     expect(select.tagName).toBe('SELECT');
-    expect(select.options).toHaveLength(2);
-    expect(select.options[0].value).toBe('public.users');
-    expect(select.options[1].value).toBe('public.orders');
+    expect(select.options).toHaveLength(3);
+    expect(select.options[0].value).toBe('');
+    expect(select.options[0].text).toBe('Select a table or view');
+    expect(select.options[1].value).toBe('public.users');
+    expect(select.options[2].value).toBe('public.orders');
   });
 
   it('renders a Discover button', () => {

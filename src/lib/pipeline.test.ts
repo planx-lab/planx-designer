@@ -220,12 +220,10 @@ describe('generateNodeName', () => {
   });
 });
 
-// ── Dangling-edge defense (T11): buildSpec must never emit a spec with
-// edges referencing non-existent nodes. This is the submit-time guard that
-// makes "node not found" + spurious "cycle" errors impossible. ──
+// Preserve invalid authored topology in drafts; validate instead of erasing it.
 
-describe('buildSpec — dangling-edge defense', () => {
-  it('drops edges whose source node was deleted', () => {
+describe('buildSpec — lossless invalid drafts', () => {
+  it('preserves dangling references until the user repairs them', () => {
     // proc was deleted but an edge still references it (corrupted state)
     const nodes = [makeNode({ nodeType: 'source', name: 'src' }, 'src'), makeNode({ nodeType: 'sink', name: 'snk' }, 'snk')];
     const edges = [
@@ -234,13 +232,15 @@ describe('buildSpec — dangling-edge defense', () => {
       { id: 'e3', source: 'src', target: 'snk' }, // valid
     ];
     const spec = buildSpec(nodes, edges, { name: 'x', tenantId: 't' });
-    expect(spec.spec.edges).toEqual([{ from: 'src', to: 'snk' }]);
+    expect(spec.spec.edges).toEqual([{ from: 'src', to: 'proc' }, { from: 'ghost-uuid', to: 'snk' }, { from: 'src', to: 'snk' }]);
+    expect(validateSpec(spec).valid).toBe(false);
   });
 
-  it('emits zero edges when all edges are dangling', () => {
+  it('preserves every edge when all references are dangling', () => {
     const nodes = [makeNode({ nodeType: 'source', name: 'src' }, 'src')];
     const edges = [{ id: 'e1', source: 'a', target: 'b' }];
     const spec = buildSpec(nodes, edges, { name: 'x', tenantId: 't' });
-    expect(spec.spec.edges).toEqual([]);
+    expect(spec.spec.edges).toEqual([{ from: 'a', to: 'b' }]);
+    expect(validateSpec(spec).valid).toBe(false);
   });
 });

@@ -21,14 +21,12 @@ export function buildSpec(
     if (n.data.config && Object.keys(n.data.config).length > 0) spec.config = n.data.config;
     return spec;
   });
-  // Defensive: drop edges whose source/target isn't a known node. Without this,
-  // a stale/dangling edge (e.g. from a corrupted persisted draft) would emit a
-  // spec that fails engine validation with "node X not found". The map lookup
-  // returns undefined for unknown ids → filter those out so submit never sends
-  // a corrupted graph. (Layer 3 of the canvas-state-invariants fix.)
-  const edgeSpecs: EdgeSpec[] = edges
-    .map((e) => ({ from: nameById.get(e.source), to: nameById.get(e.target) }))
-    .filter((e): e is EdgeSpec => e.from !== undefined && e.to !== undefined);
+  // Never silently repair an authored draft by dropping invalid edges.
+  // Structural validation explains these references and blocks execution.
+  const edgeSpecs: EdgeSpec[] = edges.map((e) => ({
+    from: nameById.get(e.source) ?? e.source,
+    to: nameById.get(e.target) ?? e.target,
+  }));
   return {
     apiVersion: API_VERSION,
     kind: 'Pipeline',
@@ -51,10 +49,10 @@ export function fromSpec(
   // so a loaded pipeline is immediately readable instead of stacked at {0,0}.
   // A simple deterministic layout; the user can drag to refine.
   const kindOrder: Record<string, number> = { source: 0, processor: 1, sink: 2 };
-  const indexed = spec.spec.nodes.map((ns, i) => ({ ns, i }));
+  const indexed = (spec.spec.nodes ?? []).map((ns, i) => ({ ns, i }));
   indexed.sort((a, b) => (kindOrder[a.ns.kind] ?? 3) - (kindOrder[b.ns.kind] ?? 3));
 
-  const nodes: PipelineNode[] = spec.spec.nodes.map((ns) => ({
+  const nodes: PipelineNode[] = (spec.spec.nodes ?? []).map((ns) => ({
     id: ns.id,
     type: 'pipelineNode',
     position: { x: 250, y: 60 + (indexed.findIndex((n) => n.ns.id === ns.id)) * 120 },
@@ -70,7 +68,7 @@ export function fromSpec(
       isValid: true,
     },
   }));
-  const edges: Edge[] = spec.spec.edges.map((e, i) => ({
+  const edges: Edge[] = (spec.spec.edges ?? []).map((e, i) => ({
     id: `e-${e.from}-${e.to}-${i}`,
     source: e.from,
     target: e.to,

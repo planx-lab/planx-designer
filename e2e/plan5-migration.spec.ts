@@ -1,5 +1,20 @@
 import { test, expect, type Page } from '@playwright/test';
 
+type DebugPipelineNode = { id: string };
+type DebugPipelineState = {
+  nodes: DebugPipelineNode[];
+  onConnect: (connection: { source: string; target: string }) => void;
+  setConfig: (nodeId: string, config: Record<string, unknown>) => void;
+  setComponent: (nodeId: string, pluginId: string, componentId: string, displayName: string) => void;
+};
+
+declare global {
+  interface Window {
+    __pipelineStore: { getState: () => DebugPipelineState };
+    __uiStore: { getState: () => { selectNode: (nodeId: string | null) => void } };
+  }
+}
+
 // ── Mock data ──────────────────────────────────────────────────────────
 
 const MOCK_PLUGINS = {
@@ -56,8 +71,8 @@ async function mockSubmitEndpoints(page: Page) {
 /** Select a canvas node by index via window.__pipelineStore (exposed in dev mode). */
 async function selectNodeViaStore(page: Page, index: number) {
   await page.evaluate((idx) => {
-    const store = (window as any).__pipelineStore;
-    const ui = (window as any).__uiStore;
+    const store = window.__pipelineStore;
+    const ui = window.__uiStore;
     const node = store.getState().nodes[idx];
     if (node) ui.getState().selectNode(node.id);
   }, index);
@@ -66,15 +81,15 @@ async function selectNodeViaStore(page: Page, index: number) {
 /** Get node IDs via window.__pipelineStore. */
 async function getNodeIds(page: Page): Promise<string[]> {
   return page.evaluate(() => {
-    const s = (window as any).__pipelineStore.getState();
-    return s.nodes.map((n: any) => n.id);
+    const s = window.__pipelineStore.getState();
+    return s.nodes.map((n) => n.id);
   });
 }
 
 /** Connect nodes via the store's onConnect. */
 async function connectNodes(page: Page, srcId: string, tgtId: string) {
   await page.evaluate(({ s, t }) => {
-    (window as any).__pipelineStore.getState().onConnect({ source: s, target: t });
+    window.__pipelineStore.getState().onConnect({ source: s, target: t });
   }, { s: srcId, t: tgtId });
 }
 
@@ -233,7 +248,7 @@ test.describe('Plan 5 Protocol Migration', () => {
       await selectNodeViaStore(page, 0);
       // Set config directly via the store (CodeMirror keyboard input is unreliable)
       await page.evaluate(() => {
-        const s = (window as any).__pipelineStore.getState();
+        const s = window.__pipelineStore.getState();
         const node = s.nodes[0];
         if (node) s.setConfig(node.id, { message: 'hello' });
       });
@@ -303,7 +318,7 @@ test.describe('Plan 5 Protocol Migration', () => {
       await connectNodes(page, ids[0], ids[1]);
       // Clear component_id on source node
       await page.evaluate(() => {
-        const s = (window as any).__pipelineStore.getState();
+        const s = window.__pipelineStore.getState();
         const node = s.nodes[0];
         if (node) s.setComponent(node.id, '', '', '');
       });

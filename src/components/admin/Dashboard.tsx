@@ -1,10 +1,11 @@
-import { Activity, Zap, Plug, Heart, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Activity, Zap, Plug, Heart, Clock, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useExecutions, usePipelines, usePipelineNameIndex, usePlugins, useHealth } from '@/hooks/queries';
-import type { ExecutionRecord } from '@/types/admin';
-import { pipelineNameResolver } from '@/lib/display';
+import { pipelineNameResolver, formatRelativeTime } from '@/lib/display';
 import { ExecutionsChart } from '@/components/admin/ExecutionsChart';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState, ErrorState, TableSkeleton } from '@/components/admin/FeedbackStates';
 import {
   Table,
   TableHeader,
@@ -17,16 +18,6 @@ import { cn } from '@/lib/utils';
 
 // ── Helpers ──
 
-function relativeTime(dateStr: string): string {
-  const ms = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
 // ── SummaryCards ──
 
 export function SummaryCards() {
@@ -34,6 +25,19 @@ export function SummaryCards() {
   const executions = useExecutions(1, '');
   const plugins = usePlugins();
   const health = useHealth();
+
+  // Three distinguishable health states. While loading there is no verdict
+  // yet — showing DEGRADED on a blank poll was a false alarm on every page
+  // load. A network error means the engine is unreachable (OFFLINE), which is
+  // distinct from the engine self-reporting DEGRADED (amber, matching the
+  // top-bar StatusIndicator convention).
+  const healthState: 'ok' | 'degraded' | 'offline' | 'loading' = health.isLoading
+    ? 'loading'
+    : health.isError || !health.data
+      ? 'offline'
+      : health.data.status;
+  const healthValue =
+    healthState === 'ok' ? 'OK' : healthState === 'degraded' ? 'DEGRADED' : healthState === 'offline' ? 'OFFLINE' : '—';
 
   const cards = [
     {
@@ -53,17 +57,17 @@ export function SummaryCards() {
     },
     {
       label: 'Health',
-      value: health.data?.status === 'ok' ? 'OK' : 'DEGRADED',
+      value: healthValue,
       icon: Heart,
-      healthOk: health.data?.status,
+      health: healthState,
     },
   ];
 
   const isLoading = pipelines.isLoading || executions.isLoading || plugins.isLoading;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map(({ label, value, icon: Icon, healthOk }) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {cards.map(({ label, value, icon: Icon, health: hs }) => (
         <Card key={label} className="bg-surface border-border rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <span className="text-xs font-medium text-foreground/50 uppercase tracking-wide">
@@ -74,13 +78,18 @@ export function SummaryCards() {
               aria-hidden
               className={cn(
                 'text-foreground/50',
-                healthOk === 'ok' && 'text-accent',
-                healthOk && healthOk !== 'ok' && 'text-destructive',
+                hs === 'ok' && 'text-accent',
+                hs === 'degraded' && 'text-warning',
+                hs === 'offline' && 'text-destructive',
               )}
             />
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="font-mono text-2xl font-semibold text-foreground tabular-nums">
+            <div className={cn(
+              'font-mono text-2xl font-semibold text-foreground tabular-nums',
+              hs === 'degraded' && 'text-warning',
+              hs === 'offline' && 'text-destructive',
+            )}>
               {isLoading && value === '-' ? (
                 <span className="inline-block h-7 w-12 animate-pulse rounded bg-surface-hover align-middle" aria-label="Loading" />
               ) : (
@@ -94,54 +103,10 @@ export function SummaryCards() {
   );
 }
 
-// ── StatusBadge ──
-
-function StatusBadge({ status }: { status: ExecutionRecord['status'] }) {
-  switch (status) {
-    case 'SUCCEEDED':
-      return (
-        <Badge variant="default" className="gap-1">
-          <CheckCircle2 size={11} aria-hidden />
-          SUCCEEDED
-        </Badge>
-      );
-    case 'RUNNING':
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-warning/15 text-warning border-warning/20 hover:bg-warning/25 gap-1"
-        >
-          <Loader2 size={11} className="animate-spin" aria-hidden />
-          RUNNING
-        </Badge>
-      );
-    case 'FAILED':
-      return (
-        <Badge variant="destructive" className="gap-1">
-          <XCircle size={11} aria-hidden />
-          FAILED
-        </Badge>
-      );
-    case 'PENDING':
-      return (
-        <Badge variant="outline" className="text-foreground/60 border-foreground/20 gap-1">
-          <Clock size={11} aria-hidden />
-          PENDING
-        </Badge>
-      );
-    default:
-      return (
-        <Badge variant="outline" className="text-foreground/60 border-foreground/20">
-          {status}
-        </Badge>
-      );
-  }
-}
-
 // ── RecentExecutions ──
 
 export function RecentExecutions() {
-  const { data, isLoading, error } = useExecutions(1, '');
+  const { data, isLoading, error, refetch } = useExecutions(1, '');
   // Resolve pipelineId → name so the Pipeline column shows a name, not a UUID.
   const { data: pipelineIndex } = usePipelineNameIndex();
   const resolvePipelineName = pipelineNameResolver(pipelineIndex?.pipelines ?? []);
@@ -149,8 +114,16 @@ export function RecentExecutions() {
   if (isLoading) {
     return (
       <Card className="bg-surface border-border rounded-lg">
-        <CardContent className="h-40 flex items-center justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+        <CardHeader className="flex flex-row items-center gap-2 border-b border-border pb-3">
+          <Clock size={16} className="text-foreground/40" />
+          <h3 className="text-sm font-medium text-foreground font-mono">Recent Executions</h3>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableBody>
+              <TableSkeleton rows={5} cols={4} />
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     );
@@ -160,7 +133,7 @@ export function RecentExecutions() {
     return (
       <Card className="bg-surface border-border rounded-lg">
         <CardContent>
-          <p className="text-destructive text-sm">Failed to load executions.</p>
+          <ErrorState message="Failed to load executions." onRetry={() => refetch()} />
         </CardContent>
       </Card>
     );
@@ -173,6 +146,15 @@ export function RecentExecutions() {
       <CardHeader className="flex flex-row items-center gap-2 border-b border-border pb-3">
         <Clock size={16} className="text-foreground/40" />
         <h3 className="text-sm font-medium text-foreground font-mono">Recent Executions</h3>
+        {/* Bridge glance → drill-down: the card is a slice of 10; the full
+            table (filters, pagination, per-node detail) is one click away. */}
+        <Link
+          to="/executions"
+          className="ml-auto flex items-center gap-1 text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
+        >
+          View all
+          <ArrowRight size={12} aria-hidden />
+        </Link>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
@@ -195,11 +177,13 @@ export function RecentExecutions() {
           <TableBody>
             {executions.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="px-4 py-8 text-center text-foreground/30 text-sm"
-                >
-                  No executions yet
+                <TableCell colSpan={4}>
+                  <EmptyState
+                    title="No executions yet"
+                    hint="Submit a pipeline from the Designer — runs will appear here."
+                    actionTo="/"
+                    actionLabel="Go to Designer"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -208,7 +192,7 @@ export function RecentExecutions() {
                   key={e.id}
                   className="border-border/50 hover:bg-surface-hover"
                 >
-                  <TableCell className="px-4 py-2.5 text-xs text-foreground/40" title={e.id}>
+                  <TableCell className="px-4 py-2.5 text-xs text-foreground/40 font-mono" title={e.id}>
                     #{idx + 1}
                   </TableCell>
                   <TableCell className="px-4 py-2.5 text-foreground/80 text-sm font-medium" title={e.pipelineId}>
@@ -217,8 +201,8 @@ export function RecentExecutions() {
                   <TableCell className="px-4 py-2.5">
                     <StatusBadge status={e.status} />
                   </TableCell>
-                  <TableCell className="px-4 py-2.5 text-foreground/40 text-sm">
-                    {relativeTime(e.createdAt)}
+                  <TableCell className="px-4 py-2.5 text-foreground/50 text-sm font-mono tabular-nums">
+                    {formatRelativeTime(e.createdAt)}
                   </TableCell>
                 </TableRow>
               ))

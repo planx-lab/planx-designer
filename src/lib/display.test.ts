@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { pipelineDisplayName, pipelineNameResolver } from './display';
+import {
+  pipelineDisplayName,
+  pipelineNameResolver,
+  formatDateTime,
+  formatRelativeTime,
+} from './display';
 import type { PipelineSummary } from '@/types/admin';
 
 // pipelineDisplayName resolves the human-readable label for a pipeline row.
@@ -56,5 +61,37 @@ describe('pipelineNameResolver', () => {
     const long = '9bbabe4b-b087-468a-8997-6999931c4697';
     const result = pipelineNameResolver(pipelines)(long);
     expect(result.length).toBeLessThan(long.length);
+  });
+});
+
+// Time formatters must never render a literal "Invalid Date" — a malformed
+// payload degrades to '—', not a raw artifact (unified-ui-design.md §4.4).
+describe('formatDateTime', () => {
+  it('formats a valid ISO date', () => {
+    expect(formatDateTime('2026-08-18T10:00:00Z')).toMatch(/2026/);
+  });
+
+  it('returns — for missing values', () => {
+    expect(formatDateTime(undefined)).toBe('—');
+    expect(formatDateTime('')).toBe('—');
+  });
+
+  it('returns — for invalid dates', () => {
+    expect(formatDateTime('not-a-date')).toBe('—');
+  });
+});
+
+describe('formatRelativeTime', () => {
+  it('returns "just now" for fresh timestamps', () => {
+    expect(formatRelativeTime(new Date().toISOString())).toBe('just now');
+  });
+
+  it('returns minutes ago', () => {
+    expect(formatRelativeTime(new Date(Date.now() - 5 * 60_000).toISOString())).toBe('5m ago');
+  });
+
+  it('returns — for invalid input', () => {
+    expect(formatRelativeTime('garbage')).toBe('—');
+    expect(formatRelativeTime(undefined)).toBe('—');
   });
 });

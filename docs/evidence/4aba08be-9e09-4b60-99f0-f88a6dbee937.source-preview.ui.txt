@@ -1,0 +1,201 @@
+- complementary:
+  - generic: Planx x
+  - navigation "Primary":
+    - generic: BUILD
+    - button "Designer":
+      - text: Designer
+    - generic: OPERATE
+    - button "Dashboard":
+      - text: Dashboard
+    - button "Executions":
+      - text: Executions
+    - button "Pipelines":
+      - text: Pipelines
+    - button "Plugins":
+      - text: Plugins
+- banner:
+  - heading "Designer" [level=1]
+  - 'status "Engine status: Ready"':
+    - generic: Ready
+  - generic: Tenant
+  - textbox "Tenant ID": reference
+- main:
+  - button "Start a new pipeline":
+    - text: New
+  - textbox "Pipeline name…": builtin-observability-reference
+  - button "Undo" [disabled]:
+  - button "Redo" [disabled]:
+  - button "Validate":
+    - text: Validate
+  - button "Preview":
+    - text: Preview
+  - button "Save":
+    - text: Save
+  - button "Submit":
+    - text: Submit
+  - complementary:
+    - button "Hide palette":
+    - textbox "Filter components…"
+    - button "Sources"
+    - button "Processors"
+    - button "Sinks"
+    - button "json-source HTTP / SOAP builtin":
+      - generic: json-source
+      - generic: HTTP / SOAP
+      - generic: builtin
+    - button "soap-source HTTP / SOAP builtin":
+      - generic: soap-source
+      - generic: HTTP / SOAP
+      - generic: builtin
+    - button "source CSV builtin":
+      - generic: source
+      - generic: CSV
+      - generic: builtin
+    - button "source MySQL builtin":
+      - generic: source
+      - generic: MySQL
+      - generic: builtin
+    - button "source Oracle 10.2+ (unverified subset) builtin":
+      - generic: source
+      - generic: Oracle 10.2+ (unverified subset)
+      - generic: builtin
+    - button "source PostgreSQL builtin":
+      - generic: source
+      - generic: PostgreSQL
+      - generic: builtin
+    - button "source RabbitMQ builtin":
+      - generic: source
+      - generic: RabbitMQ
+      - generic: builtin
+    - button "source SQL Server builtin":
+      - generic: source
+      - generic: SQL Server
+      - generic: builtin
+  - main:
+    - application:
+      - 'button "source node: SQL Server"':
+        - generic: source
+        - button "Delete source node":
+        - paragraph: SQL Server
+        - paragraph: read
+        - generic: Configured
+      - 'button "processor node: Dimension Lookup"':
+        - generic: processor
+        - button "Delete processor node":
+        - paragraph: Dimension Lookup
+        - paragraph: enrich
+        - generic: Configured
+      - 'button "processor node: Typed Records"':
+        - generic: processor
+        - button "Delete processor node":
+        - paragraph: Typed Records
+        - paragraph: map
+        - generic: Configured
+      - 'button "processor node: Typed Records"':
+        - generic: processor
+        - button "Delete processor node":
+        - paragraph: Typed Records
+        - paragraph: validate
+        - generic: Configured
+      - 'button "processor node: Typed Records"':
+        - generic: processor
+        - button "Delete processor node":
+        - paragraph: Typed Records
+        - paragraph: filter
+        - generic: Configured
+      - 'button "sink node: PostgreSQL"':
+        - generic: sink
+        - button "Delete sink node":
+        - paragraph: PostgreSQL
+        - paragraph: write
+        - generic: Configured
+      - generic "Control Panel":
+        - button "Zoom In":
+        - button "Zoom Out":
+        - button "Fit View":
+        - button "Toggle Interactivity":
+  - complementary:
+    - button "Hide config":
+    - generic: source
+    - heading "SQL Server" [level=3]
+    - paragraph: read
+    - generic: Node Name
+    - textbox "Node Name":
+      - /placeholder: e.g. main-source
+      - text: read
+    - generic: Component
+    - combobox "Component":
+      - option "HTTP / SOAP / json-source"
+      - option "HTTP / SOAP / soap-source"
+      - option "CSV / source"
+      - option "MySQL / source"
+      - option "Oracle 10.2+ (unverified subset) / source"
+      - option "PostgreSQL / source"
+      - option "RabbitMQ / source"
+      - option "SQL Server / source" [selected]
+    - generic: Config
+    - button "Raw JSON"
+    - group "Config":
+      - generic "Tenant-scoped Connection resource ID; never an inline DSN.": connection_ref*
+      - combobox "connection_ref*":
+        - option "Select a tenant connection"
+        - option "dimension (postgres)"
+        - option "source (sqlserver)" [selected]
+        - option "target (postgres)"
+      - button "New connection"
+      - button "Edit metadata"
+      - button "Refresh resources"
+      - generic: Version 2
+      - generic "Optional; must match the registered factory.": driver
+      - combobox "driver"
+      - generic "Unquoted table/view or schema.name for reads; table for writes. Identifiers are quoted by the connector.": table
+      - textbox "table":
+        - /placeholder: schema.table
+        - text: reference.source_records
+      - button "Discover"
+      - generic "Ordered selected columns; defaults to all source columns or batch schema fields. Selected missing values fail, never become NULL. Unselected insert columns are omitted for database defaults/identity/generated rules; unselected update columns remain unchanged.": columns
+      - textbox "columns":
+        - /placeholder: col1,col2 (at least one required)
+      - generic "Public record.Schema; an exact contract, not a coercion rule. Timestamps preserve UTC instants, not original offsets. Decimal and temporal target precision narrowing is rejected before writing; PostgreSQL and MySQL timestamps are limited to microseconds. MySQL unsigned integers use Uint64; TINYINT(1) remains Int64, not Bool; zero dates, TIME, JSON, ENUM and SET require explicit conversion.": schema
+      - textbox "schema"
+      - generic "Default 1000; 1..100000. Maximum rows per delivery or sink transaction.": batch_rows
+      - textbox "batch_rows": "3"
+      - 'generic "Default 16777216; 1..1073741824. Public EstimatedBytes bound per typed batch and conservative converted-parameter bound per write. Sources may retain one additional bounded pending row. Not an RSS limit: drivers may allocate wire values before validation."': max_batch_bytes
+      - textbox "max_batch_bytes"
+      - generic "Default 4194304; 1..1073741824. Bounds each value's public retained-data estimate and raw/text parameter representation. Oversized values or single rows fail; nothing is truncated. Driver wire/encoding allocations are not a process-memory guarantee.": max_value_bytes
+      - textbox "max_value_bytes"
+      - generic "Default 300; 1..3600. Bounds a source cursor lifetime or one sink write.": timeout_seconds
+      - textbox "timeout_seconds"
+      - 'generic "Opt-in append-only recovery: a selected, non-null signed-integer single-column primary key. Table scans only; ordered ACKs persist a compatible checkpoint. No CDC, backfill or mutable-key replay guarantee."': cursor_column
+      - textbox "cursor_column"
+      - generic "Exactly one of query or table is required. Query results must have unique column names.": query
+      - textbox "query"
+      - generic "Query-only ordered public SDK record.Value JSON array, at most 256 scalar values. Use native placeholders ($1, @p1, ?); no SQL interpolation. SDK integer Data is a decimal string and Decimal Data is coefficient/exponent, decoded into exact typed values. Explicit typed NULL is allowed; missing/nested values are rejected. Existing max_batch_bytes/max_value_bytes also bound retained parameters and encoded representations. SQL controls result casts; input wire precision loss is rejected.": parameters
+      - textbox "parameters"
+    - button "Validate Config":
+      - text: Validate Config
+    - region "Component operations":
+      - button "Test connection"
+      - paragraph: Explicit read-only hook, bounded to 10 seconds. It does not run the pipeline or save Connection metadata.
+      - generic: Input record.Schema JSON
+      - paragraph: Use the schema received by this component after upstream Mapping/Lookup, not raw Source discovery. This is a static precheck, not source data preview.
+      - textbox "Input record.Schema JSON" [disabled]:
+        - /placeholder: "{\"fields\":[{\"name\":\"amount\",\"kind\":\"decimal\",\"nullable\":true,\"precision\":38,\"scale\":18}]}"
+      - button "Check compatibility" [disabled]
+      - paragraph: Compatibility check unsupported by this component.
+    - region "Source data preview":
+      - heading "Source data preview" [level=4]
+      - paragraph: Explicit read-only hook, bounded to 10 seconds. No pipeline execution, source ACK, checkpoint save or target write is requested.
+      - text: Maximum preview rows
+      - spinbutton "Maximum preview rows": "20"
+      - text: Maximum preview bytes
+      - spinbutton "Maximum preview bytes": "65536"
+      - paragraph: The byte budget covers the complete compact response JSON, including schema. It is not a process-memory bound.
+      - button "Preview source data"
+      - paragraph: 8 preview records
+      - paragraph: Not truncated (reported by source).
+      - paragraph: Missing is not NULL; an empty string is present. Typed cells retain kind/present/null/data. Integers, decimal coefficients and temporal text are not reformatted.
+      - paragraph: record.Schema (from this preview, not legacy Discover)
+      - generic "Preview record.Schema": "{ \"fields\": [ { \"name\": \"record_id\", \"kind\": \"int64\", \"nullable\": false, \"precision\": 0, \"scale\": 0 }, { \"name\": \"tenant_key\", \"kind\": \"string\", \"nullable\": false, \"precision\": 0, \"scale\": 0 }, { \"name\": \"dimension_key\", \"kind\": \"int64\", \"nullable\": false, \"precision\": 0, \"scale\": 0 }, { \"name\": \"amount\", \"kind\": \"decimal\", \"nullable\": true, \"precision\": 38, \"scale\": 18 }, { \"name\": \"occurred_at\", \"kind\": \"timestamp\", \"nullable\": true, \"precision\": 0, \"scale\": 0 }, { \"name\": \"nullable_text\", \"kind\": \"string\", \"nullable\": true, \"precision\": 0, \"scale\": 0 }, { \"name\": \"empty_text\", \"kind\": \"string\", \"nullable\": false, \"precision\": 0, \"scale\": 0 }, { \"name\": \"unicode_text\", \"kind\": \"string\", \"nullable\": false, \"precision\": 0, \"scale\": 0 } ] }"
+      - paragraph: Typed records
+      - generic "Typed preview records": "[ { \"amount\": { \"kind\": \"decimal\", \"present\": true, \"null\": false, \"data\": { \"coefficient\": \"-1\", \"exponent\": -18 } }, \"dimension_key\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740993\" }, \"empty_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"nullable_text\": { \"kind\": \"string\", \"present\": true, \"null\": true }, \"occurred_at\": { \"kind\": \"timestamp\", \"present\": true, \"null\": false, \"data\": \"2025-12-31T10:00:00Z\" }, \"record_id\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"-9223372036854775808\" }, \"tenant_key\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"tenant_alpha\" }, \"unicode_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"é\" } }, { \"amount\": { \"kind\": \"decimal\", \"present\": true, \"null\": false, \"data\": { \"coefficient\": \"0\", \"exponent\": -18 } }, \"dimension_key\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740993\" }, \"empty_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"nullable_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"line one\\nline two\" }, \"occurred_at\": { \"kind\": \"timestamp\", \"present\": true, \"null\": false, \"data\": \"2026-01-01T11:59:59.999999Z\" }, \"record_id\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"-9007199254740993\" }, \"tenant_key\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"tenant_beta\" }, \"unicode_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"é\" } }, { \"amount\": { \"kind\": \"decimal\", \"present\": true, \"null\": false, \"data\": { \"coefficient\": \"1\", \"exponent\": -18 } }, \"dimension_key\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740995\" }, \"empty_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"nullable_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"nonempty\" }, \"occurred_at\": { \"kind\": \"timestamp\", \"present\": true, \"null\": false, \"data\": \"2026-11-01T05:30:00Z\" }, \"record_id\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"42\" }, \"tenant_key\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"tenant_alpha\" }, \"unicode_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"東京\" } }, { \"amount\": { \"kind\": \"decimal\", \"present\": true, \"null\": false, \"data\": { \"coefficient\": \"-12345678901234567890123456789012345678\", \"exponent\": -18 } }, \"dimension_key\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740995\" }, \"empty_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"nullable_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"occurred_at\": { \"kind\": \"timestamp\", \"present\": true, \"null\": false, \"data\": \"2026-11-01T06:30:00Z\" }, \"record_id\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"43\" }, \"tenant_key\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"tenant_alpha\" }, \"unicode_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"🚀\" } }, { \"amount\": { \"kind\": \"decimal\", \"present\": true, \"null\": true }, \"dimension_key\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740993\" }, \"empty_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"nullable_text\": { \"kind\": \"string\", \"present\": true, \"null\": true }, \"occurred_at\": { \"kind\": \"timestamp\", \"present\": true, \"null\": true }, \"record_id\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"44\" }, \"tenant_key\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"tenant_beta\" }, \"unicode_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" } }, { \"amount\": { \"kind\": \"decimal\", \"present\": true, \"null\": false, \"data\": { \"coefficient\": \"12345678901234567890123456789012345678\", \"exponent\": -18 } }, \"dimension_key\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740993\" }, \"empty_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"nullable_text\": { \"kind\": \"string\", \"present\": true, \"null\": true }, \"occurred_at\": { \"kind\": \"timestamp\", \"present\": true, \"null\": false, \"data\": \"2026-09-08T00:30:45.123456Z\" }, \"record_id\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740993\" }, \"tenant_key\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"tenant_alpha\" }, \"unicode_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"中文，café，Δ\" } }, { \"amount\": { \"kind\": \"decimal\", \"present\": true, \"null\": false, \"data\": { \"coefficient\": \"-99999999999999999999999999999999999999\", \"exponent\": -18 } }, \"dimension_key\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740995\" }, \"empty_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"nullable_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"occurred_at\": { \"kind\": \"timestamp\", \"present\": true, \"null\": false, \"data\": \"2026-03-08T06:59:59.999999Z\" }, \"record_id\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740995\" }, \"tenant_key\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"tenant_alpha\" }, \"unicode_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"naïve 🧪\" } }, { \"amount\": { \"kind\": \"decimal\", \"present\": true, \"null\": false, \"data\": { \"coefficient\": \"99999999999999999999999999999999999999\", \"exponent\": -18 } }, \"dimension_key\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9007199254740993\" }, \"empty_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"\" }, \"nullable_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"present\" }, \"occurred_at\": { \"kind\": \"timestamp\", \"present\": true, \"null\": false, \"data\": \"2026-09-08T00:00:00Z\" }, \"record_id\": { \"kind\": \"int64\", \"present\": true, \"null\": false, \"data\": \"9223372036854775807\" }, \"tenant_key\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"tenant_beta\" }, \"unicode_text\": { \"kind\": \"string\", \"present\": true, \"null\": false, \"data\": \"مرحبا\" } } ]"

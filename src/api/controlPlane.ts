@@ -1,6 +1,7 @@
-import type { PluginInfo, FieldType, TableInfo, ColumnInfo } from '@/types/plugin';
-import type { CreatePipelineResponse } from '@/types/api';
+import type { PluginInfo, FieldType, ConfigField, TableInfo, ColumnInfo } from '@/types/plugin';
+import { ApiError, type CreatePipelineResponse } from '@/types/api';
 import type { PipelineSpec } from '@/types/pipeline';
+import type { ExecutionProgress } from '@/types/progress';
 import { api } from './client';
 
 /** Validate a plugin component's configuration against its schema. */
@@ -8,11 +9,14 @@ export async function validateConfig(
   pluginId: string,
   componentId: string,
   config: Record<string, unknown>,
-): Promise<{ ok: boolean; message: string }> {
-  return api.post<{ ok: boolean; message: string }>('/plugins/validate', {
+  tenantId: string,
+): Promise<{ ok: boolean; message?: string }> {
+  if (!tenantId?.trim()) throw new Error('Tenant context is required for validation');
+  return api.post<{ ok: boolean; message?: string }>('/plugins/validate', {
     pluginId,
     componentId,
     config,
+    tenantId,
   });
 }
 
@@ -22,10 +26,12 @@ export async function discoverSchema(
   pluginId: string,
   componentId: string,
   config: Record<string, unknown>,
+  tenantId: string,
 ): Promise<{ tables: TableInfo[]; columns: ColumnInfo[] }> {
+  if (!tenantId?.trim()) throw new Error('Tenant context is required for discovery');
   return api.post<{ tables: TableInfo[]; columns: ColumnInfo[] }>(
     '/plugins/discover-schema',
-    { pluginId, componentId, config },
+    { pluginId, componentId, config, tenantId },
   );
 }
 
@@ -34,16 +40,39 @@ interface PluginsResponse {
   plugins: PluginInfo[];
 }
 
-/** Map the engine's proto FieldType enum (number) to the designer's FieldType string.
- *  Proto: 1=STRING, 2=INTEGER, 4=BOOLEAN, 5=SECRET, 6=ENUM (3/7/8 unused in Alpha).
- *  The engine serializes ConfigField.type as the proto enum number, but SchemaForm's
- *  switch expects string names — without this, no case matches and inputs don't render. */
+/** Preserve every declared protocol type; unknown types must not become strings. */
 function normalizeFieldType(raw: unknown): FieldType {
-  if (typeof raw === 'string') return raw as FieldType;
+  if (typeof raw === 'string') return raw.replace(/^FIELD_TYPE_/, '') as FieldType;
   const protoMap: Record<number, FieldType> = {
-    1: 'STRING', 2: 'INTEGER', 4: 'BOOLEAN', 5: 'SECRET', 6: 'ENUM',
+    1: 'STRING', 2: 'INTEGER', 3: 'NUMBER', 4: 'BOOLEAN',
+    5: 'SECRET', 6: 'ENUM', 7: 'OBJECT', 8: 'ARRAY',
   };
-  return protoMap[raw as number] ?? 'STRING';
+  return protoMap[raw as number] ?? (String(raw) as FieldType);
+}
+
+function normalizeConfigField(field: ConfigField): ConfigField {
+  type Defaults = NonNullable<ConfigField['defaultValue']>;
+  const wire = field as ConfigField & {
+    enum_values?: string[];
+    default?: {
+      string_value?: Defaults['stringValue'];
+      int_value?: Defaults['intValue'];
+      double_value?: Defaults['numberValue'];
+      bool_value?: Defaults['boolValue'];
+    };
+  };
+  return {
+    ...field,
+    type: normalizeFieldType(field.type),
+    enumValues: field.enumValues ?? wire.enum_values,
+    defaultValue: field.defaultValue ?? (wire.default ? {
+      stringValue: wire.default.string_value,
+      intValue: wire.default.int_value,
+      numberValue: wire.default.double_value,
+      boolValue: wire.default.bool_value,
+    } : undefined),
+    properties: field.properties?.map(normalizeConfigField),
+  };
 }
 
 /** Normalize the engine's proto-style configSchema to the designer's TypeScript format. */
@@ -55,10 +84,7 @@ function normalizePlugin(plugin: PluginInfo): PluginInfo {
       ...c,
       configSchema: c.configSchema
         ? {
-            fields: c.configSchema.fields.map((f) => ({
-              ...f,
-              type: normalizeFieldType(f.type),
-            })),
+            fields: c.configSchema.fields.map(normalizeConfigField),
           }
         : undefined,
     })),
@@ -79,16 +105,51 @@ export function normalizeStatus<R extends { status: string }>(r: R): R {
   return { ...r, status: r.status.toLowerCase() as R['status'] };
 }
 
-/** Submit a pipeline spec for execution. */
+/** Require both managed connections and nonexecuting drafts before a managed
+ * operation. This capability probe never performs resource I/O. */
+export async function requireManagedWorkflow(signal?: AbortSignal): Promise<void> {
+  try {
+    const health = await api.get<{ pipelineWorkflow?: string; connectionWorkflow?: string }>('/healthz', { signal });
+    if (health.pipelineWorkflow !== 'draft-v1' || health.connectionWorkflow !== 'managed-v1') {
+      throw new Error('Engine 需要 draft-v1 和 managed-v1 工作流，请更新并重启 Engine');
+    }
+  } catch (err) {
+    // This is a local precondition failure: no managed operation has been sent.
+    throw new ApiError(412, `未发送管理操作请求：${err instanceof Error ? err.message : '无法确认 Engine 工作流版本'}`);
+  }
+}
+
+/** Save a NEW draft only. Incomplete configuration is allowed; never executes. */
 export async function submitPipeline(
   specification: PipelineSpec,
   tenantId: string,
   projectId?: string,
+): Promise<PipelineDetail> {
+  await requireManagedWorkflow();
+  return api.post<PipelineDetail>('/pipelines', { tenantId, projectId, specification });
+}
+
+/** Confirm a saved revision. Reuse requestId only to resolve the SAME intent,
+ * never silently generate another identity after an uncertain response. */
+export async function runPipeline(
+  pipelineId: string,
+  tenantId: string,
+  expectedRevision: string,
+  requestId: string,
+  expectedConnections: Readonly<Record<string, string>>,
 ): Promise<CreatePipelineResponse> {
-  const r = await api.get<CreatePipelineResponse>('/pipelines', {
-    method: 'POST',
-    body: JSON.stringify({ tenantId, projectId, specification }),
-  });
+  if (!expectedRevision || !requestId) throw new Error('保存版本和运行请求号不能为空');
+  if (!expectedConnections || typeof expectedConnections !== 'object' || Array.isArray(expectedConnections)
+    || Object.entries(expectedConnections).some(([id, revision]) => !id.trim() || typeof revision !== 'string' || !revision.trim())) {
+    throw new ApiError(400, '运行前连接版本快照不能为空；无资源任务必须显式传入空映射。');
+  }
+  // Copy the confirmed intent before any await, never substitute a fresh map.
+  const connections = { ...expectedConnections };
+  await requireManagedWorkflow();
+  const r = await api.post<CreatePipelineResponse>(
+    `/pipelines/${encodeURIComponent(pipelineId)}/run?tenantId=${encodeURIComponent(tenantId)}`,
+    { expectedRevision, requestId, expectedConnections: connections },
+  );
   return normalizeStatus(r);
 }
 
@@ -98,7 +159,10 @@ export interface ExecutionStatus {
   pipelineId: string;
   status: 'pending' | 'running' | 'succeeded' | 'failed';
   createdAt?: string;
+  requestId?: string;
+  definition?: { revision: string };
   errorMessage?: string;
+  progress?: ExecutionProgress | null;
   /** Per-node lifecycle statuses during execution. Present when the engine emits them. */
   nodeStatuses?: Record<string, { nodeId: string; status: string; error?: string }>;
 }
@@ -109,14 +173,29 @@ export async function getExecution(
   tenantId: string,
 ): Promise<ExecutionStatus> {
   // The engine serves GET /executions/{id}?tenantId=...
-  const r = await api.get<ExecutionStatus>(
+  const r = await api.get<ExecutionStatus & { id?: string }>(
     `/executions/${executionId}?tenantId=${encodeURIComponent(tenantId)}`,
   );
-  return normalizeStatus(r);
+  const id = r.executionId ?? r.id;
+  if (!id) throw new Error('Execution detail did not include an ID');
+  return normalizeStatus({ ...r, executionId: id });
+}
+
+/** Resolve a previously submitted run without starting or replaying anything. */
+export async function getExecutionByRequest(requestId: string, tenantId: string): Promise<ExecutionStatus> {
+  const r = await api.get<ExecutionStatus & { id?: string }>(
+    `/executions/by-request/${encodeURIComponent(requestId)}?tenantId=${encodeURIComponent(tenantId)}`,
+  );
+  const id = r.executionId ?? r.id;
+  if (!id) throw new Error('Execution detail did not include an ID');
+  return normalizeStatus({ ...r, executionId: id });
 }
 
 /** Full pipeline record returned by GET /api/pipelines/{id} (includes the spec). */
 export interface PipelineDetail {
+  revision: string;
+  projectId?: string;
+  validation?: { scope: 'structure'; status: 'invalid' | 'unverified'; errors: string[] };
   pipelineId: string;
   tenantId: string;
   createdAt: string;
@@ -134,9 +213,13 @@ export async function updatePipeline(
   tenantId: string,
   name: string,
   spec: PipelineSpec,
+  expectedRevision: string,
 ): Promise<PipelineDetail> {
+  if (!expectedRevision) throw new Error('保存版本不能为空；请重新打开任务');
+  await requireManagedWorkflow();
   return api.put<PipelineDetail>(`/pipelines/${id}?tenantId=${encodeURIComponent(tenantId)}`, {
     name,
+    expectedRevision,
     specification: spec,
   });
 }

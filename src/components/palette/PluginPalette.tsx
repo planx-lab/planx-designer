@@ -15,21 +15,18 @@ const tabs: { type: ComponentKind; label: string }[] = [
   { type: 'sink', label: 'Sinks' },
 ];
 
-export function PluginPalette() {
+export function PluginPalette({ onAdded }: { onAdded?: (nodeId: string) => void } = {}) {
   const [activeTab, setActiveTab] = useState<ComponentKind>('source');
   const [search, setSearch] = useState('');
 
-  const plugins = usePaletteStore((s) => s.plugins);
+  usePaletteStore((s) => s.plugins);
   const error = usePaletteStore((s) => s.error);
   const loading = usePaletteStore((s) => s.loading);
   const fetchPlugins = usePaletteStore((s) => s.fetchPlugins);
   const addNode = usePipelineStore((s) => s.addNode);
   const getItemsByKind = usePaletteStore((s) => s.getItemsByKind);
 
-  const itemsByKind = useMemo(
-    () => getItemsByKind(),
-    [getItemsByKind, plugins],
-  );
+  const itemsByKind = getItemsByKind();
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -43,12 +40,13 @@ export function PluginPalette() {
   }, [itemsByKind, activeTab, search]);
 
   const handleAdd = (item: PaletteItem) => {
-    addNode(
+    const node = addNode(
       item.kind,
       item.pluginId,
       item.componentId,
       item.componentDisplayName,
     );
+    onAdded?.(node.id);
   };
 
   const handleDragStart = (e: React.DragEvent, item: PaletteItem) => {
@@ -117,7 +115,7 @@ export function PluginPalette() {
       {/* Component list */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {filtered.length === 0 && (
-          <p className="text-foreground/30 text-xs text-center py-8">
+          <p className="text-foreground/50 text-xs text-center py-8">
             {loading ? 'Loading…' : 'No components found'}
           </p>
         )}
@@ -143,6 +141,11 @@ export function PluginPalette() {
             >
               {item.pluginDisplayName}
             </span>
+            {item.origin && (
+              <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide mt-1 ml-1 ${PLUGIN_BADGE}`}>
+                {item.origin}
+              </span>
+            )}
             {item.description && (
               <p className="text-foreground/40 text-[11px] mt-0.5 truncate">
                 {item.description}

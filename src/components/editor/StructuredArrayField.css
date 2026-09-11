@@ -1,0 +1,41 @@
+.structured-config { min-width: 0; color: inherit; font-size: 13px; }
+.structured-config *, .structured-config *::before, .structured-config *::after { box-sizing: border-box; }
+.structured-config__heading, .structured-config__actions, .structured-config__footer, .structured-config__label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.structured-config__heading { justify-content: space-between; margin-bottom: 6px; }
+.structured-config__heading strong { font-size: 14px; }
+.structured-config__count { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 12px; background: color-mix(in srgb, currentColor 7%, transparent); font-variant-numeric: tabular-nums; }
+.structured-config button, .structured-config select, .structured-config input, .structured-config textarea { font: inherit; color: inherit; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 6px; background: transparent; }
+.structured-config button { min-height: 32px; padding: 5px 9px; cursor: pointer; }
+.structured-config button:hover:not(:disabled) { background: color-mix(in srgb, currentColor 6%, transparent); }
+.structured-config button:disabled { opacity: .4; cursor: not-allowed; }
+.structured-config :is(button, input, textarea, select):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.structured-config :is(input, textarea, select) { width: 100%; min-width: 0; min-height: 36px; padding: 7px 9px; }
+.structured-config textarea { resize: vertical; overflow-wrap: anywhere; line-height: 1.45; }
+.structured-config__help { font-size: 12px; line-height: 1.5; opacity: .75; overflow-wrap: anywhere; margin: 5px 0; }
+.structured-config__help:empty, .structured-config__error:empty { display: none; }
+.structured-config__rows { display: grid; gap: 12px; margin-top: 10px; }
+.structured-config__row, .structured-config__object { min-width: 0; border: 1px solid color-mix(in srgb, currentColor 16%, transparent); border-radius: 9px; padding: 12px; }
+.structured-config__row { background: color-mix(in srgb, currentColor 2%, transparent); }
+.structured-config legend { max-width: 100%; padding: 0 5px; font-weight: 600; overflow-wrap: anywhere; }
+.structured-config__actions { justify-content: flex-end; margin-bottom: 12px; }
+.structured-config__properties { display: grid; gap: 10px; min-width: 0; }
+.structured-config__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.structured-config__property, .structured-config__field { min-width: 0; }
+.structured-config__label { margin-bottom: 5px; justify-content: space-between; }
+.structured-config__label label { font-weight: 600; }
+.structured-config__label small { font-size: 11px; opacity: .65; }
+.structured-config__remove-property { font-size: 11px !important; opacity: .7; }
+.structured-config__error { color: var(--destructive, #a13c32); font-size: 12px; line-height: 1.5; margin: 5px 0; }
+.structured-config [aria-invalid="true"] { border-color: var(--destructive, #a13c32); }
+.structured-config__empty { border: 1px dashed color-mix(in srgb, currentColor 22%, transparent); border-radius: 8px; padding: 16px; line-height: 1.6; }
+.structured-config__footer { margin-top: 12px; }
+.structured-config__add { font-weight: 600 !important; }
+.structured-config-options { border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent); padding-top: 12px; }
+.structured-config-options > summary { padding: 8px 0; cursor: pointer; font-size: 13px; font-weight: 600; }
+.structured-config-options > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.structured-config-options[open] > summary { margin-bottom: 12px; }
+@media (max-width: 640px) {
+  .structured-config :is(button, input, select) { min-height: 44px; }
+  .structured-config__grid { grid-template-columns: minmax(0, 1fr); }
+  .structured-config__row { padding: 10px; }
+}

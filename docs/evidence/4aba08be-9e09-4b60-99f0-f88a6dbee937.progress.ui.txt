@@ -1,0 +1,391 @@
+- complementary:
+  - generic: Planx x
+  - navigation "Primary":
+    - generic: BUILD
+    - button "Designer":
+      - text: Designer
+    - generic: OPERATE
+    - button "Dashboard":
+      - text: Dashboard
+    - button "Executions":
+      - text: Executions
+    - button "Pipelines":
+      - text: Pipelines
+    - button "Plugins":
+      - text: Plugins
+- banner:
+  - heading "Executions" [level=1]
+  - 'status "Engine status: Ready"':
+    - generic: Ready
+  - generic: Tenant
+  - textbox "Tenant ID": reference
+- main:
+  - group "Filter executions by status":
+    - generic: "Filter:"
+    - button "All" [pressed]
+    - button "PENDING"
+    - button "RUNNING"
+    - button "SUCCEEDED"
+    - button "FAILED"
+    - generic: 2 total
+  - table:
+    - rowgroup:
+      - row "# Pipeline Status Error Created Finished":
+        - columnheader
+        - columnheader "#"
+        - columnheader "Pipeline"
+        - columnheader "Status"
+        - columnheader "Error"
+        - columnheader "Created"
+        - columnheader "Finished"
+    - rowgroup:
+      - button "Execution of builtin-observability-reference, SUCCEEDED, click to collapse details" [expanded]:
+        - cell:
+        - cell "#1"
+        - cell "builtin-observability-reference"
+        - cell "SUCCEEDED":
+          - text: SUCCEEDED
+        - cell "—"
+        - cell "9/9/2026, 1:35:42 AM"
+        - cell "9/9/2026, 1:35:43 AM"
+      - 'row "Node statuses: enrich · completed filter · completed map · completed read · completed validate · completed write · completed Execution progress execution 4aba08be-9e09-4b60-99f0-f88a6dbee937"':
+        - 'cell "Node statuses: enrich · completed filter · completed map · completed read · completed validate · completed write · completed Execution progress execution 4aba08be-9e09-4b60-99f0-f88a6dbee937"':
+          - paragraph: "Node statuses:"
+          - generic: enrich
+          - generic: ·
+          - generic: completed
+          - generic: filter
+          - generic: ·
+          - generic: completed
+          - generic: map
+          - generic: ·
+          - generic: completed
+          - generic: read
+          - generic: ·
+          - generic: completed
+          - generic: validate
+          - generic: ·
+          - generic: completed
+          - generic: write
+          - generic: ·
+          - generic: completed
+          - region "Execution progress":
+            - paragraph: Execution progress
+            - term: Source deliveries
+            - definition: "3"
+            - term: Source acknowledged deliveries
+            - definition: "3"
+            - term: Unknown source acknowledgements
+            - definition: "0"
+            - term: ACK errors
+            - definition: "0"
+            - term: In-flight batches
+            - definition: "0"
+            - term: In-flight bytes
+            - definition: "0"
+            - paragraph: Source.Ack returned nil is the meaning of a successful source acknowledgement. It does not prove broker-side durable confirmation or exactly-once delivery.
+            - term: ACK duration (ns)
+            - definition: "1334"
+            - term: Cleanup errors
+            - definition: "0"
+            - term: Cleanup duration (ns)
+            - definition: "72834"
+            - term: Pending source acknowledgements
+            - definition: "0"
+            - term: Oldest pending acknowledgement (ns)
+            - definition: "0"
+            - table:
+              - rowgroup:
+                - row "Node Input rows Output rows Attempted rows Committed rows Unknown commits":
+                  - columnheader "Node"
+                  - columnheader "Input rows"
+                  - columnheader "Output rows"
+                  - columnheader "Attempted rows"
+                  - columnheader "Committed rows"
+                  - columnheader "Unknown commits"
+              - rowgroup:
+                - row "enrich 8 8 0 0 0":
+                  - cell "enrich"
+                  - cell "8"
+                  - cell "8"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "filter 8 7 0 0 0":
+                  - cell "filter"
+                  - cell "8"
+                  - cell "7"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "map 8 8 0 0 0":
+                  - cell "map"
+                  - cell "8"
+                  - cell "8"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "read 0 8 0 0 0":
+                  - cell "read"
+                  - cell "0"
+                  - cell "8"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "validate 8 8 0 0 0":
+                  - cell "validate"
+                  - cell "8"
+                  - cell "8"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                - row "write 7 0 7 7 0":
+                  - cell "write"
+                  - cell "7"
+                  - cell "0"
+                  - cell "7"
+                  - cell "7"
+                  - cell "0"
+            - table "Node transport and cleanup":
+              - rowgroup:
+                - row "Node Input bytes Output bytes Queue wait (ns) Backpressure (ns) Cleanup errors Cleanup duration (ns)":
+                  - columnheader "Node"
+                  - columnheader "Input bytes"
+                  - columnheader "Output bytes"
+                  - columnheader "Queue wait (ns)"
+                  - columnheader "Backpressure (ns)"
+                  - columnheader "Cleanup errors"
+                  - columnheader "Cleanup duration (ns)"
+              - rowgroup:
+                - row "enrich 14280 20410 5666 0 0 6000":
+                  - cell "enrich"
+                  - cell "14280"
+                  - cell "20410"
+                  - cell "5666"
+                  - cell "0"
+                  - cell "0"
+                  - cell "6000"
+                - row "filter 18106 16567 3584 0 0 1584":
+                  - cell "filter"
+                  - cell "18106"
+                  - cell "16567"
+                  - cell "3584"
+                  - cell "0"
+                  - cell "0"
+                  - cell "1584"
+                - row "map 14296 14280 4333 0 0 1000":
+                  - cell "map"
+                  - cell "14296"
+                  - cell "14280"
+                  - cell "4333"
+                  - cell "0"
+                  - cell "0"
+                  - cell "1000"
+                - row "read 0 14296 0 0 0 26750":
+                  - cell "read"
+                  - cell "0"
+                  - cell "14296"
+                  - cell "0"
+                  - cell "0"
+                  - cell "0"
+                  - cell "26750"
+                - row "validate 20410 18106 3667 0 0 1750":
+                  - cell "validate"
+                  - cell "20410"
+                  - cell "18106"
+                  - cell "3667"
+                  - cell "0"
+                  - cell "0"
+                  - cell "1750"
+                - row "write 16567 0 3583 0 0 35750":
+                  - cell "write"
+                  - cell "16567"
+                  - cell "0"
+                  - cell "3583"
+                  - cell "0"
+                  - cell "0"
+                  - cell "35750"
+            - table "Component domain statistics":
+              - rowgroup:
+                - row "Node Statistic (raw key) Value":
+                  - columnheader "Node"
+                  - columnheader "Statistic (raw key)"
+                  - columnheader "Value"
+              - rowgroup:
+                - row "enrich cache_bytes 0":
+                  - cell "enrich"
+                  - cell "cache_bytes"
+                  - cell "0"
+                - row "enrich cache_entries 0":
+                  - cell "enrich"
+                  - cell "cache_entries"
+                  - cell "0"
+                - row "enrich cache_hits 0":
+                  - cell "enrich"
+                  - cell "cache_hits"
+                  - cell "0"
+                - row "enrich dimension_memory_limit_bytes 2097152":
+                  - cell "enrich"
+                  - cell "dimension_memory_limit_bytes"
+                  - cell "2097152"
+                - row "enrich matched 8":
+                  - cell "enrich"
+                  - cell "matched"
+                  - cell "8"
+                - row "enrich missing 0":
+                  - cell "enrich"
+                  - cell "missing"
+                  - cell "0"
+                - row "enrich multiple_matches 0":
+                  - cell "enrich"
+                  - cell "multiple_matches"
+                  - cell "0"
+                - row "enrich negative_hits 0":
+                  - cell "enrich"
+                  - cell "negative_hits"
+                  - cell "0"
+                - row "enrich queried_keys 0":
+                  - cell "enrich"
+                  - cell "queried_keys"
+                  - cell "0"
+                - row "enrich queries 1":
+                  - cell "enrich"
+                  - cell "queries"
+                  - cell "1"
+                - row "enrich query_duration_ns 3300500":
+                  - cell "enrich"
+                  - cell "query_duration_ns"
+                  - cell "3300500"
+                - row "enrich refresh_candidate_bytes 0":
+                  - cell "enrich"
+                  - cell "refresh_candidate_bytes"
+                  - cell "0"
+                - row "enrich refresh_failures 0":
+                  - cell "enrich"
+                  - cell "refresh_failures"
+                  - cell "0"
+                - row "enrich snapshot_age_ms 210":
+                  - cell "enrich"
+                  - cell "snapshot_age_ms"
+                  - cell "210"
+                - row "enrich snapshot_bytes 0":
+                  - cell "enrich"
+                  - cell "snapshot_bytes"
+                  - cell "0"
+                - row "enrich snapshot_revision 1":
+                  - cell "enrich"
+                  - cell "snapshot_revision"
+                  - cell "1"
+                - row "filter cel_cost_samples 8":
+                  - cell "filter"
+                  - cell "cel_cost_samples"
+                  - cell "8"
+                - row "filter cel_cost_units 24":
+                  - cell "filter"
+                  - cell "cel_cost_units"
+                  - cell "24"
+                - row "filter cel_evaluations 8":
+                  - cell "filter"
+                  - cell "cel_evaluations"
+                  - cell "8"
+                - row "filter conversion_failures 0":
+                  - cell "filter"
+                  - cell "conversion_failures"
+                  - cell "0"
+                - row "filter filtered_records 1":
+                  - cell "filter"
+                  - cell "filtered_records"
+                  - cell "1"
+                - row "filter process_duration_ns 108666":
+                  - cell "filter"
+                  - cell "process_duration_ns"
+                  - cell "108666"
+                - row "filter processed_records 8":
+                  - cell "filter"
+                  - cell "processed_records"
+                  - cell "8"
+                - row "filter validation_failures 0":
+                  - cell "filter"
+                  - cell "validation_failures"
+                  - cell "0"
+                - row "map cel_cost_samples 8":
+                  - cell "map"
+                  - cell "cel_cost_samples"
+                  - cell "8"
+                - row "map cel_cost_units 52":
+                  - cell "map"
+                  - cell "cel_cost_units"
+                  - cell "52"
+                - row "map cel_evaluations 8":
+                  - cell "map"
+                  - cell "cel_evaluations"
+                  - cell "8"
+                - row "map conversion_failures 0":
+                  - cell "map"
+                  - cell "conversion_failures"
+                  - cell "0"
+                - row "map filtered_records 0":
+                  - cell "map"
+                  - cell "filtered_records"
+                  - cell "0"
+                - row "map process_duration_ns 255834":
+                  - cell "map"
+                  - cell "process_duration_ns"
+                  - cell "255834"
+                - row "map processed_records 8":
+                  - cell "map"
+                  - cell "processed_records"
+                  - cell "8"
+                - row "map validation_failures 0":
+                  - cell "map"
+                  - cell "validation_failures"
+                  - cell "0"
+                - row "validate cel_cost_samples 16":
+                  - cell "validate"
+                  - cell "cel_cost_samples"
+                  - cell "16"
+                - row "validate cel_cost_units 48":
+                  - cell "validate"
+                  - cell "cel_cost_units"
+                  - cell "48"
+                - row "validate cel_evaluations 16":
+                  - cell "validate"
+                  - cell "cel_evaluations"
+                  - cell "16"
+                - row "validate conversion_failures 0":
+                  - cell "validate"
+                  - cell "conversion_failures"
+                  - cell "0"
+                - row "validate filtered_records 0":
+                  - cell "validate"
+                  - cell "filtered_records"
+                  - cell "0"
+                - row "validate process_duration_ns 161625":
+                  - cell "validate"
+                  - cell "process_duration_ns"
+                  - cell "161625"
+                - row "validate processed_records 8":
+                  - cell "validate"
+                  - cell "processed_records"
+                  - cell "8"
+                - row "validate validation_failures 0":
+                  - cell "validate"
+                  - cell "validation_failures"
+                  - cell "0"
+            - paragraph: Snapshots may contain cumulative counters or live gauges; absent statistics are not zero. Raw keys and units are supplied by each component.
+            - paragraph: Source acknowledgements, target commits and local in-flight ownership are independent. ACK errors may include unknown outcomes; zero in-flight does not prove source acknowledgement or target commit.
+            - paragraph: Unknown source acknowledgements are a subset of ACK errors, not successful ACKs. Other ACK errors do not prove remote non-confirmation. Terminal cleanup can release pending ACK gauges without successful source confirmation.
+            - paragraph: "Byte measurements are payload estimates, not process RSS: node bytes are cumulative transfers; in-flight bytes estimate currently retained payload and schema. Durations are wall time in nanoseconds, not CEL evaluator cost or critical-path latency. Unknown commits count Sink.Write unknown-result events, not rows."
+          - paragraph: execution 4aba08be-9e09-4b60-99f0-f88a6dbee937
+      - button "Execution of builtin-ui-reference, SUCCEEDED, click to expand details":
+        - cell:
+        - cell "#2"
+        - cell "builtin-ui-reference"
+        - cell "SUCCEEDED":
+          - text: SUCCEEDED
+        - cell "—"
+        - cell "9/8/2026, 11:54:16 PM"
+        - cell "9/8/2026, 11:54:16 PM"
+  - generic: Page 1 of 1
+  - button "Previous page" [disabled]:
+  - button "Next page" [disabled]:

@@ -27,6 +27,7 @@
     "clsx": "^2.1.1",
     "codemirror": "^6.0.2",
     "js-yaml": "^4.2.0",
+    "lossless-json": "4.3.0",
     "lucide-react": "^1.20.0",
     "nanoid": "^5.1.11",
     "react": "^19.2.6",

@@ -1,0 +1,154 @@
+{
+  "apiVersion": "planx/v4",
+  "kind": "Pipeline",
+  "metadata": {
+    "name": "builtin-ui-reference",
+    "tenantId": "reference"
+  },
+  "spec": {
+    "nodes": [
+      {
+        "id": "read",
+        "kind": "source",
+        "plugin_id": "sqlserver",
+        "component_id": "source",
+        "config": {
+          "connection_ref": "source",
+          "table": "reference.source_records",
+          "batch_rows": 3
+        }
+      },
+      {
+        "id": "enrich",
+        "kind": "processor",
+        "plugin_id": "lookup",
+        "component_id": "enrich",
+        "config": {
+          "connection_ref": "dimension",
+          "resource_version": "fixture-v1",
+          "mode": "snapshot",
+          "table": "reference.dimension",
+          "keys": [
+            {
+              "source": "tenant_key",
+              "column": "tenant_key",
+              "kind": "string"
+            },
+            {
+              "source": "dimension_key",
+              "column": "dimension_key",
+              "kind": "int64"
+            }
+          ],
+          "fields": [
+            {
+              "column": "dimension_label",
+              "target": "dimension_label",
+              "kind": "string"
+            },
+            {
+              "column": "dimension_version",
+              "target": "dimension_version",
+              "kind": "int64"
+            }
+          ],
+          "missing": "fail",
+          "multiple": "fail",
+          "collision": "fail",
+          "null_keys": "fail",
+          "max_rows": 100,
+          "max_bytes": 1048576,
+          "timeout_ms": 5000
+        }
+      },
+      {
+        "id": "map",
+        "kind": "processor",
+        "plugin_id": "processors",
+        "component_id": "mapping",
+        "config": {
+          "operations": [
+            {
+              "op": "compute",
+              "to": "amount",
+              "kind": "decimal",
+              "precision": 38,
+              "scale": 18,
+              "nullable": true,
+              "expression": "record.amount == null ? null : record.amount * decimal('-1')"
+            }
+          ]
+        }
+      },
+      {
+        "id": "validate",
+        "kind": "processor",
+        "plugin_id": "processors",
+        "component_id": "validate",
+        "config": {
+          "assertions": [
+            "record.record_id != 0",
+            "record.dimension_version > 0"
+          ]
+        }
+      },
+      {
+        "id": "filter",
+        "kind": "processor",
+        "plugin_id": "processors",
+        "component_id": "filter",
+        "config": {
+          "expression": "record.amount != null"
+        }
+      },
+      {
+        "id": "write",
+        "kind": "sink",
+        "plugin_id": "postgres",
+        "component_id": "sink",
+        "config": {
+          "connection_ref": "target",
+          "table": "reference.target_records",
+          "write_mode": "upsert",
+          "conflict_keys": [
+            "record_id"
+          ],
+          "columns": [
+            "record_id",
+            "tenant_key",
+            "dimension_key",
+            "amount",
+            "occurred_at",
+            "nullable_text",
+            "empty_text",
+            "unicode_text",
+            "dimension_label",
+            "dimension_version"
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": "read",
+        "to": "map"
+      },
+      {
+        "from": "map",
+        "to": "enrich"
+      },
+      {
+        "from": "enrich",
+        "to": "validate"
+      },
+      {
+        "from": "validate",
+        "to": "filter"
+      },
+      {
+        "from": "filter",
+        "to": "write"
+      }
+    ]
+  }
+}

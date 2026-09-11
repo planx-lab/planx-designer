@@ -1,0 +1,104 @@
+apiVersion: "planx/v4"
+kind: "Pipeline"
+metadata:
+  name: "builtin-observability-reference"
+  tenantId: "reference"
+spec:
+  nodes:
+    - id: "read"
+      kind: "source"
+      plugin_id: "sqlserver"
+      component_id: "source"
+      config:
+        batch_rows: 3
+        connection_ref: "source"
+        table: "reference.source_records"
+    - id: "enrich"
+      kind: "processor"
+      plugin_id: "lookup"
+      component_id: "enrich"
+      config:
+        collision: "fail"
+        connection_ref: "dimension"
+        fields:
+          - column: "dimension_label"
+            kind: "string"
+            target: "dimension_label"
+          - column: "dimension_version"
+            kind: "int64"
+            target: "dimension_version"
+        keys:
+          - column: "tenant_key"
+            kind: "string"
+            source: "tenant_key"
+          - column: "dimension_key"
+            kind: "int64"
+            source: "dimension_key"
+        max_bytes: 1048576
+        max_rows: 100
+        missing: "fail"
+        mode: "snapshot"
+        multiple: "fail"
+        null_keys: "fail"
+        resource_version: "fixture-v1"
+        table: "reference.dimension"
+        timeout_ms: 5000
+    - id: "map"
+      kind: "processor"
+      plugin_id: "processors"
+      component_id: "mapping"
+      config:
+        operations:
+          - expression: "record.amount == null ? null : record.amount * decimal('-1')"
+            kind: "decimal"
+            nullable: true
+            op: "compute"
+            precision: 38
+            scale: 18
+            to: "amount"
+    - id: "validate"
+      kind: "processor"
+      plugin_id: "processors"
+      component_id: "validate"
+      config:
+        assertions:
+          - "record.record_id != 0"
+          - "record.dimension_version > 0"
+    - id: "filter"
+      kind: "processor"
+      plugin_id: "processors"
+      component_id: "filter"
+      config:
+        expression: "record.amount != null"
+    - id: "write"
+      kind: "sink"
+      plugin_id: "postgres"
+      component_id: "sink"
+      config:
+        columns:
+          - "record_id"
+          - "tenant_key"
+          - "dimension_key"
+          - "amount"
+          - "occurred_at"
+          - "nullable_text"
+          - "empty_text"
+          - "unicode_text"
+          - "dimension_label"
+          - "dimension_version"
+        conflict_keys:
+          - "record_id"
+        connection_ref: "target"
+        table: "reference.observability_c75fbb72"
+        write_mode: "upsert"
+  edges:
+    - from: "read"
+      to: "map"
+    - from: "map"
+      to: "enrich"
+    - from: "enrich"
+      to: "validate"
+    - from: "validate"
+      to: "filter"
+    - from: "filter"
+      to: "write"
