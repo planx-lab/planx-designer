@@ -12,7 +12,8 @@ it('discovers tables and columns from an empty panel with the active tenant', as
   usePipelineStore.getState().reset('tenant-a');
   usePaletteStore.setState({ plugins: [{
     id: 'postgres', version: '1', displayName: 'PostgreSQL', components: [{
-      id: 'source', kind: 'source', displayName: 'Source', configSchema: { fields: [
+      id: 'source', kind: 'source', displayName: 'Source',
+      operations: { testConnection: false, checkCompatibility: false, discoverSchema: true }, configSchema: { fields: [
         { name: 'table', type: 'STRING' }, { name: 'columns', type: 'STRING' },
       ] },
     }],

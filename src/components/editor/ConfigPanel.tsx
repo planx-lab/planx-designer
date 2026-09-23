@@ -81,6 +81,9 @@ export function ConfigPanel({ nodeId, showSourcePreview = true, showCompatibilit
   }, [plugins, node?.data?.pluginId, node?.data?.componentId]);
 
   const configSchema = selectedComponent?.configSchema;
+  const discoverySupported = selectedComponent?.operations?.discoverSchema === true;
+  const connectionKinds = selectedComponent?.connectionKinds;
+  const connectionKindsKey = JSON.stringify(connectionKinds);
   const discoveryConnectionRef = configSchema?.fields.some(
     (field) => field.name === 'connection_ref',
   ) ? node?.data.config.connection_ref : undefined;
@@ -142,7 +145,7 @@ export function ConfigPanel({ nodeId, showSourcePreview = true, showCompatibilit
     validationRequest.current = null;
     setDiscovery({ tables: [], columns: [], loading: false });
     setValidateState({ status: 'idle' });
-  }, [selectedNodeId, pluginId, componentId, tenantId, discoveryConnectionRef]);
+  }, [selectedNodeId, pluginId, componentId, tenantId, discoveryConnectionRef, discoverySupported, connectionKindsKey]);
 
   const handleConnectionChange = () => {
     // Saving managed settings can keep the same resource ID.
@@ -155,6 +158,7 @@ export function ConfigPanel({ nodeId, showSourcePreview = true, showCompatibilit
   // Discover tables for the current connection config. Triggered by the
   // "Discover Tables" button on the table field.
   const handleDiscoverTables = async () => {
+    if (!discoverySupported) return;
     const request = captureContext();
     if (!request?.pluginId || !request.componentId) return;
     discoveryRequest.current = request;
@@ -181,6 +185,7 @@ export function ConfigPanel({ nodeId, showSourcePreview = true, showCompatibilit
 
   // When the user selects a table, persist it and auto-discover columns.
   const handleTableChange = async (table: string) => {
+    if (!discoverySupported) return;
     const before = captureContext();
     if (!before) return;
     const connConfig: Record<string, unknown> = { ...before.config, table };
@@ -345,13 +350,14 @@ export function ConfigPanel({ nodeId, showSourcePreview = true, showCompatibilit
               recordSchemaForms={recordSchemaForms}
               tenantId={tenantId}
               connectionDriver={connectionDriver}
+              connectionKinds={connectionKinds}
               onConnectionChange={handleConnectionChange}
               value={node.data.config}
               onChange={(config) => setConfig(node.id, config)}
               tables={discovery.tables}
               columns={discovery.columns}
-              onDiscoverTables={handleDiscoverTables}
-              onTableChange={handleTableChange}
+              onDiscoverTables={discoverySupported ? handleDiscoverTables : undefined}
+              onTableChange={discoverySupported ? handleTableChange : undefined}
               loadingDiscovery={discovery.loading}
             />
           </div>
@@ -380,6 +386,14 @@ export function ConfigPanel({ nodeId, showSourcePreview = true, showCompatibilit
               />
             </Suspense>
           </div>
+        )}
+
+        {hasSchema && !showRawJson && configSchema.fields.some((field) => field.name === 'table') && !discoverySupported && (
+          <p className="mt-2 text-xs text-foreground/50">
+            {selectedComponent?.operations?.discoverSchema === false
+              ? 'Schema discovery unsupported by this component.'
+              : 'Schema discovery support not reported by this component.'}
+          </p>
         )}
 
         {discovery.error && (

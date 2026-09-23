@@ -5,7 +5,7 @@ import type { ConnectionImpact, ConnectionKind, ConnectionMetadata, ConnectionMu
 
 const INPUT = 'w-full bg-muted border border-border rounded-md h-8 px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60';
 const ACTION = 'text-accent text-[11px] hover:underline disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded';
-type Props = { id: string; tenantId: string; driver?: string; value: string; onChange: (id: string) => void };
+type Props = { id: string; tenantId: string; driver?: string; connectionKinds?: string[]; value: string; onChange: (id: string) => void };
 type Field = ConnectionKind['fields'][number];
 
 function defaultSecret(field: Field, base: ConnectionResource | null): ConnectionSecretAction {
@@ -19,10 +19,14 @@ function draftOf(connection: ConnectionResource): ConnectionMetadata {
 
 /** Keyed scope discards local credentials and pending callbacks when the selection changes. */
 export function ConnectionField(props: Props) {
-  return <ScopedConnectionField key={JSON.stringify([props.tenantId, props.driver ?? '', props.value])} {...props} />;
+  // Explicit Factory metadata owns the restriction. Legacy declared-driver
+  // projection remains a fallback only when the Catalog omits connectionKinds.
+  const driver = props.connectionKinds === undefined ? props.driver
+    : props.connectionKinds.length === 1 ? props.connectionKinds[0] : undefined;
+  return <ScopedConnectionField key={JSON.stringify([props.tenantId, driver ?? '', props.connectionKinds, props.value])} {...props} driver={driver} />;
 }
 
-function ScopedConnectionField({ id, tenantId, driver, value, onChange }: Props) {
+function ScopedConnectionField({ id, tenantId, driver, connectionKinds, value, onChange }: Props) {
   const [connections, setConnections] = useState<ConnectionResource[]>([]);
   const [loading, setLoading] = useState(!!tenantId.trim());
   const [refresh, setRefresh] = useState(0);
@@ -43,7 +47,8 @@ function ScopedConnectionField({ id, tenantId, driver, value, onChange }: Props)
     return () => { current = false; abort.abort(); };
   }, [tenantId, refresh]);
 
-  const available = connections.filter((connection) => !driver || connection.driver === driver);
+  const available = connections.filter((connection) => (!driver || connection.driver === driver)
+    && (connectionKinds === undefined || connectionKinds.includes(connection.driver)));
   const selected = available.find((connection) => connection.id === value);
   const disabled = !tenantId.trim() || loading || editor !== null;
   const open = (base: ConnectionResource | null) => {
@@ -65,7 +70,7 @@ function ScopedConnectionField({ id, tenantId, driver, value, onChange }: Props)
       </option>)}
     </select>
     {!tenantId.trim() ? <p className="text-[11px] text-warning">Tenant context is required for connections.</p> : <div className="flex flex-wrap items-center gap-2">
-      <button type="button" className={ACTION} disabled={disabled} onClick={() => open(null)}>New connection</button>
+      <button type="button" className={ACTION} disabled={disabled || connectionKinds?.length === 0} onClick={() => open(null)}>New connection</button>
       {selected && <button type="button" className={ACTION} disabled={disabled} onClick={() => open(selected)}>
         {selected.ready ? 'Edit connection' : 'Complete setup'}
       </button>}
@@ -75,7 +80,7 @@ function ScopedConnectionField({ id, tenantId, driver, value, onChange }: Props)
     {selected && !selected.ready && <p className="text-[11px] text-warning">This connection needs structured setup before testing or running. Its existing reference is preserved.</p>}
     {loading && <p role="status" className="text-[11px] text-foreground/50">Loading connections...</p>}
     {error && <p role="alert" className="text-[11px] text-destructive break-words">{error}</p>}
-    {editor && <ConnectionEditor key={editor.generation} id={id} tenantId={tenantId} driver={driver} initial={editor.base}
+    {editor && <ConnectionEditor key={editor.generation} id={id} tenantId={tenantId} driver={driver} connectionKinds={connectionKinds} initial={editor.base}
       onClose={() => { ++editorGeneration.current; setEditor(null); }}
       onSaved={(saved) => {
         if (editorGeneration.current !== editor.generation) return;
@@ -87,8 +92,8 @@ function ScopedConnectionField({ id, tenantId, driver, value, onChange }: Props)
 }
 
 /** Credentials live only in this mounted editor, never the pipeline or any store. */
-function ConnectionEditor({ id, tenantId, driver, initial, onClose, onSaved }: {
-  id: string; tenantId: string; driver?: string; initial: ConnectionResource | null;
+function ConnectionEditor({ id, tenantId, driver, connectionKinds, initial, onClose, onSaved }: {
+  id: string; tenantId: string; driver?: string; connectionKinds?: string[]; initial: ConnectionResource | null;
   onClose: () => void; onSaved: (connection: ConnectionResource) => void;
 }) {
   const [base, setBase] = useState(initial);
@@ -118,7 +123,8 @@ function ConnectionEditor({ id, tenantId, driver, initial, onClose, onSaved }: {
   }, [tenantId]);
 
   const kind = kinds.find((profile) => profile.kind === draft.driver);
-  const visibleKinds = kinds.filter((profile) => !driver || profile.kind === driver);
+  const visibleKinds = kinds.filter((profile) => (!driver || profile.kind === driver)
+    && (connectionKinds === undefined || connectionKinds.includes(profile.kind)));
   const unknownParameters = kind ? Object.keys(draft.parameters).filter((name) => !kind.fields.some((field) => field.name === name && !field.secret)) : [];
   const changed = () => { ++generation.current; setReview(null); setQueried(null); setError(''); };
   const update = (next: ConnectionMetadata) => { changed(); setDraft(next); };
@@ -126,7 +132,8 @@ function ConnectionEditor({ id, tenantId, driver, initial, onClose, onSaved }: {
   const changeSecret = (name: string, action: ConnectionSecretAction) => { changed(); setSecrets((current) => ({ ...current, [name]: action })); };
 
   const mutation = (): ConnectionMutation | null => {
-    if (!draft.id.trim() || draft.id.length > 128 || !draft.name.trim() || !kind) {
+    if (!draft.id.trim() || draft.id.length > 128 || !draft.name.trim() || !kind
+      || !visibleKinds.some((profile) => profile.kind === draft.driver)) {
       setError('Enter a connection ID, name and a kind declared by the Catalog.'); return null;
     }
     if (unknownParameters.length) {
@@ -299,7 +306,8 @@ function ConnectionEditor({ id, tenantId, driver, initial, onClose, onSaved }: {
       <p>{queried.name} ({queried.driver}); {queried.ready ? 'ready' : 'setup required'}. This is saved metadata, not proof of the earlier request outcome.</p>
       <dl className="space-y-1">{Object.entries(queried.parameters).map(([name, value]) => <div key={name}><dt>{name}</dt><dd className="break-all">{value}</dd></div>)}</dl>
       <p>Configured credential names: {Object.entries(queried.configuredSecrets).filter(([, configured]) => configured).map(([name]) => name).join(', ') || 'none'}.</p>
-      <button type="button" className={ACTION} disabled={!!busy || (!!driver && queried.driver !== driver)} onClick={() => {
+      <button type="button" className={ACTION} disabled={!!busy || (!!driver && queried.driver !== driver)
+        || (connectionKinds !== undefined && !connectionKinds.includes(queried.driver))} onClick={() => {
         changed(); setBase(queried); setDraft(draftOf(queried)); setSecrets({}); setUnknown(false); setCanQuery(false);
       }}>Replace draft with saved revision</button>
       <p>This discards the visible draft. Any new credential value must be entered again.</p>

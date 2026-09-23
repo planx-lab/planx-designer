@@ -35,6 +35,8 @@ export interface ComponentOperations {
   testConnection: boolean;
   checkCompatibility: boolean;
   preview?: boolean;
+  /** Omitted is unknown, including external protocols without hook metadata. */
+  discoverSchema?: boolean;
 }
 
 /** One component of a plugin (runtime unit). */
@@ -45,6 +47,8 @@ export interface ComponentInfo {
   description?: string;
   configSchema?: ConfigSchema;
   operations?: ComponentOperations;
+  /** Managed connection profile kinds declared by this component's Factory. */
+  connectionKinds?: string[];
   origin?: 'builtin' | 'external';
   availability?: 'available';
   /** Opaque server capabilities until the typed schema contract is assigned. */

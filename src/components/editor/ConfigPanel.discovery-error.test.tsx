@@ -24,7 +24,8 @@ it('shows a real discovery failure without hiding it or resaving connection meta
   useUIStore.setState({ selectedNodeId: 'source' });
   usePaletteStore.setState({ plugins: [{
     id: 'sqlserver', version: '1', displayName: 'SQL Server', origin: 'builtin',
-    components: [{ id: 'source', kind: 'source', displayName: 'Source', configSchema: {
+    components: [{ id: 'source', kind: 'source', displayName: 'Source',
+      operations: { testConnection: false, checkCompatibility: false, discoverSchema: true }, configSchema: {
       fields: [{ name: 'table', type: 'STRING', label: 'Table' }],
     } }],
   }] });

@@ -11,6 +11,7 @@ interface SchemaFormProps {
   onChange: (value: Record<string, unknown>) => void;
   tenantId?: string;
   connectionDriver?: string;
+  connectionKinds?: string[];
   /** Selection or managed settings changed, including saves retaining the same ID. */
   onConnectionChange?: () => void;
   /** Workbench authoring of the public typed-data schema; legacy JSON remains available. */
@@ -185,6 +186,7 @@ function BasicSchemaForm({
   onChange,
   tenantId = '',
   connectionDriver,
+  connectionKinds,
   onConnectionChange,
   recordSchemaForms,
   tables,
@@ -375,6 +377,7 @@ function BasicSchemaForm({
   const renderControl = (field: ConfigField) => {
     if (field.name === 'connection_ref') {
       return <ConnectionField key={`${tenantId}:${connectionDriver ?? ''}`} id={field.name} tenantId={tenantId} driver={connectionDriver}
+        connectionKinds={connectionKinds}
         value={String(getCurrentValue(value, field) ?? '')}
         onChange={(connectionId) => {
           handleChange(field, connectionId);

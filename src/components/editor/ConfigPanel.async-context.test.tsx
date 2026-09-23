@@ -98,6 +98,7 @@ function mountPanel(nodeId?: string) {
     id, version: '1', displayName: id,
     components: ['source', 'alternate'].map((componentId) => ({
       id: componentId, kind: 'source' as const, displayName: componentId, configSchema: { fields },
+      operations: { testConnection: false, checkCompatibility: false, discoverSchema: true },
     })),
   })) });
   return render(<ConfigPanel nodeId={nodeId} showSourcePreview={false} />);
@@ -498,6 +499,7 @@ it('Raw JSON does not infer a connection scope from an undeclared connection_ref
     id: 'postgres', version: '1', displayName: 'postgres',
     components: [{
       id: 'source', kind: 'source', displayName: 'source',
+      operations: { testConnection: false, checkCompatibility: false, discoverSchema: true },
       configSchema: { fields: fields.filter((field) => field.name !== 'connection_ref') },
     }],
   }] }));
